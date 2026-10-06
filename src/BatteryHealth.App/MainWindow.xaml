@@ -1,0 +1,38 @@
+<Window
+    x:Class="BatteryHealth.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid Background="{ThemeResource LayerOnMicaBaseAltFillColorDefaultBrush}" Padding="16,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="BatteryHealth" FontWeight="SemiBold" FontSize="16"/>
+                <TextBlock Text="EV lithium-ion degradation &amp; RUL forecaster" FontSize="11" Opacity="0.7"/>
+            </StackPanel>
+            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                       Text="{x:Bind Workspace.BatteryTitle, Mode=OneWay}" Opacity="0.85"/>
+        </Grid>
+
+        <NavigationView Grid.Row="1"
+                        x:Name="Nav"
+                        PaneDisplayMode="Left"
+                        IsSettingsVisible="False"
+                        IsBackButtonVisible="Collapsed"
+                        ItemInvoked="OnItemInvoked">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Lifecycle dashboard" Tag="dashboard" Icon="PreviewLink"/>
+                <NavigationViewItem Content="RUL forecast" Tag="forecast" Icon="Clock"/>
+                <NavigationViewItem Content="Stress simulator" Tag="simulator" Icon="Repair"/>
+            </NavigationView.MenuItems>
+            <Frame x:Name="ContentFrame"/>
+        </NavigationView>
+    </Grid>
+</Window>

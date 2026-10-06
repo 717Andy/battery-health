@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "BatteryHealth (unpackaged)": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "soh": {
+    "model": "soh.onnx",
+    "inputName": "features",
+    "outputName": "variable",
+    "columns": [
+      "cycle_index",
+      "voltage_mean",
+      "voltage_std",
+      "voltage_min",
+      "voltage_max",
+      "voltage_start",
+      "voltage_end",
+      "voltage_slope",
+      "current_mean",
+      "current_std",
+      "temp_mean",
+      "temp_std",
+      "temp_max",
+      "temp_rise",
+      "duration_s",
+      "energy_wh",
+      "time_to_3v5",
+      "time_to_3v0",
+      "ambient_temp_c"
+    ]
+  },
+  "rul": {
+    "model": "rul.onnx",
+    "inputName": "features",
+    "outputName": "variable",
+    "columns": [
+      "cycle_index",
+      "voltage_mean",
+      "voltage_std",
+      "voltage_min",
+      "voltage_max",
+      "voltage_start",
+      "voltage_end",
+      "voltage_slope",
+      "current_mean",
+      "current_std",
+      "temp_mean",
+      "temp_std",
+      "temp_max",
+      "temp_rise",
+      "duration_s",
+      "energy_wh",
+      "time_to_3v5",
+      "time_to_3v0",
+      "ambient_temp_c",
+      "soh"
+    ]
+  },
+  "eolCapacityFraction": 0.7,
+  "eolCapacityFractionOem": 0.8,
+  "ratedCapacityAh": 2.0,
+  "notes": "NASA PCoE official end-of-life is 70% of rated capacity (2.0 Ah \u2192 1.4 Ah). The 80% threshold is the common EV warranty / replacement line."
+}

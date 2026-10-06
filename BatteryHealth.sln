@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{97DF9E91-BA84-4A63-AE1B-803D2DBC6658}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BatteryHealth.Core", "src\BatteryHealth.Core\BatteryHealth.Core.csproj", "{9F187273-2E64-4905-882B-891A914778DE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BatteryHealth.Cli", "src\BatteryHealth.Cli\BatteryHealth.Cli.csproj", "{6520058A-DE21-4FD9-AC5B-F8116E25FF77}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{AAE5CF42-7329-4327-BADD-E69539E34B45}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BatteryHealth.Core.Tests", "tests\BatteryHealth.Core.Tests\BatteryHealth.Core.Tests.csproj", "{13CC301F-D6E4-4E17-8A5B-33C771FF5899}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BatteryHealth.App", "src\BatteryHealth.App\BatteryHealth.App.csproj", "{B1E28027-CBE3-4CE0-9D3C-CDAA0576D63C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9F187273-2E64-4905-882B-891A914778DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F187273-2E64-4905-882B-891A914778DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F187273-2E64-4905-882B-891A914778DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F187273-2E64-4905-882B-891A914778DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6520058A-DE21-4FD9-AC5B-F8116E25FF77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6520058A-DE21-4FD9-AC5B-F8116E25FF77}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6520058A-DE21-4FD9-AC5B-F8116E25FF77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6520058A-DE21-4FD9-AC5B-F8116E25FF77}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13CC301F-D6E4-4E17-8A5B-33C771FF5899}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13CC301F-D6E4-4E17-8A5B-33C771FF5899}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13CC301F-D6E4-4E17-8A5B-33C771FF5899}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13CC301F-D6E4-4E17-8A5B-33C771FF5899}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1E28027-CBE3-4CE0-9D3C-CDAA0576D63C}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{B1E28027-CBE3-4CE0-9D3C-CDAA0576D63C}.Debug|Any CPU.Build.0 = Debug|x86
+		{B1E28027-CBE3-4CE0-9D3C-CDAA0576D63C}.Release|Any CPU.ActiveCfg = Release|x86
+		{B1E28027-CBE3-4CE0-9D3C-CDAA0576D63C}.Release|Any CPU.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9F187273-2E64-4905-882B-891A914778DE} = {97DF9E91-BA84-4A63-AE1B-803D2DBC6658}
+		{6520058A-DE21-4FD9-AC5B-F8116E25FF77} = {97DF9E91-BA84-4A63-AE1B-803D2DBC6658}
+		{13CC301F-D6E4-4E17-8A5B-33C771FF5899} = {AAE5CF42-7329-4327-BADD-E69539E34B45}
+		{B1E28027-CBE3-4CE0-9D3C-CDAA0576D63C} = {97DF9E91-BA84-4A63-AE1B-803D2DBC6658}
+	EndGlobalSection
+EndGlobal

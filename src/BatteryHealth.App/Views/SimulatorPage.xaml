@@ -1,0 +1,49 @@
+<Page
+    x:Class="BatteryHealth.App.Views.SimulatorPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:lvc="using:LiveChartsCore.SkiaSharpView.WinUI">
+
+    <Grid Padding="24" ColumnSpacing="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Spacing="16">
+            <TextBlock Text="Thermal &amp; load stress" Style="{StaticResource TitleTextBlockStyle}" TextWrapping="Wrap"/>
+            <TextBlock Text="{x:Bind ViewModel.PhysicsNote, Mode=OneWay}" TextWrapping="Wrap" Opacity="0.75"/>
+
+            <TextBlock Text="Ambient temperature (°C)" FontWeight="SemiBold"/>
+            <Slider Minimum="-10" Maximum="55" StepFrequency="1"
+                    Value="{x:Bind ViewModel.AmbientC, Mode=TwoWay}"
+                    ValueChanged="OnChanged"/>
+            <TextBlock Text="{x:Bind ViewModel.AmbientC, Mode=OneWay}"/>
+
+            <TextBlock Text="Discharge C-rate" FontWeight="SemiBold"/>
+            <Slider Minimum="0.2" Maximum="3.0" StepFrequency="0.1"
+                    Value="{x:Bind ViewModel.CRate, Mode=TwoWay}"
+                    ValueChanged="OnChanged"/>
+            <TextBlock Text="{x:Bind ViewModel.CRate, Mode=OneWay}"/>
+
+            <TextBlock Text="{x:Bind ViewModel.AfText, Mode=OneWay}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+            <TextBlock Text="{x:Bind ViewModel.RulCompare, Mode=OneWay}" TextWrapping="Wrap"/>
+            <Button Content="Reset to NASA 24 °C / 1C" Click="OnReset"/>
+        </StackPanel>
+
+        <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Baseline fade vs stressed fade" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <lvc:CartesianChart Grid.Row="1"
+                                    Series="{x:Bind ViewModel.FadeSeries, Mode=OneWay}"
+                                    XAxes="{x:Bind ViewModel.CycleAxis}"
+                                    YAxes="{x:Bind ViewModel.CapacityAxis}"
+                                    LegendPosition="Bottom"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

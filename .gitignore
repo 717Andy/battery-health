@@ -1,0 +1,41 @@
+# Raw / processed battery data (large). Use ml/scripts/download_nasa.py
+data/raw/
+data/processed/
+*.mat
+*.zip
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+.ipynb_checkpoints/
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+[Dd]ebug/
+[Rr]elease/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local secrets / caches
+.tmp/
+/tmp/
+
+# Keep fixture + committed models
+!ml/tests/fixtures/**
+!artifacts/models/**
+!artifacts/metrics.json

@@ -1,0 +1,10 @@
+{
+  "solution": {
+    "path": "BatteryHealth.sln",
+    "projects": [
+      "src/BatteryHealth.Core/BatteryHealth.Core.csproj",
+      "src/BatteryHealth.Cli/BatteryHealth.Cli.csproj",
+      "tests/BatteryHealth.Core.Tests/BatteryHealth.Core.Tests.csproj"
+    ]
+  }
+}

@@ -1,0 +1,65 @@
+<Page
+    x:Class="BatteryHealth.App.Views.ForecastPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:lvc="using:LiveChartsCore.SkiaSharpView.WinUI">
+
+    <Grid Padding="24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Spacing="6">
+            <TextBlock Text="RUL &amp; SoH forecast" Style="{StaticResource TitleTextBlockStyle}"/>
+            <TextBlock Text="{x:Bind ViewModel.Headline, Mode=OneWay}" Opacity="0.8"/>
+            <TextBlock Text="{x:Bind ViewModel.EolText, Mode=OneWay}" TextWrapping="Wrap" Opacity="0.75"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="1.4*"/>
+            </Grid.ColumnDefinitions>
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Predicted SoH" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind ViewModel.SohText, Mode=OneWay}" FontSize="36" FontWeight="SemiBold"/>
+                    <TextBlock Text="{x:Bind ViewModel.ObservedText, Mode=OneWay}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Remaining useful life" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind ViewModel.RulText, Mode=OneWay}" FontSize="36" FontWeight="SemiBold"/>
+                    <ToggleSwitch Header="Use 80% OEM warranty threshold"
+                                  IsOn="{x:Bind ViewModel.UseOemThreshold, Mode=TwoWay}"/>
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Held-out model metrics" FontWeight="SemiBold"/>
+                    <TextBlock Text="{x:Bind ViewModel.MetricsText, Mode=OneWay}" TextWrapping="Wrap"/>
+                    <Button Content="Re-run forecast" Click="OnRefresh" Style="{StaticResource AccentButtonStyle}"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Predicted vs measured SoH across cycles" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <lvc:CartesianChart Grid.Row="1"
+                                    Series="{x:Bind ViewModel.SohSeries, Mode=OneWay}"
+                                    XAxes="{x:Bind ViewModel.CycleAxis}"
+                                    YAxes="{x:Bind ViewModel.SohAxis}"
+                                    LegendPosition="Bottom"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

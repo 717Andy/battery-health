@@ -106,8 +106,8 @@ button.accent:hover { background: var(--accent-hover); }
   padding: 16px;
   box-shadow: var(--shadow);
 }
-.chart-card { min-height: 280px; }
-.chart-card canvas { width: 100% !important; height: 240px !important; }
+.chart-card { min-height: 340px; }
+.chart-card canvas { width: 100% !important; height: 300px !important; }
 
 .split { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
 .cycle-card input[type="range"] { width: 100%; }

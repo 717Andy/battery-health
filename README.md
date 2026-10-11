@@ -166,19 +166,29 @@ python -c "from batteryhealth.parsers.calce import parse_calce; import json; jso
 
 Typical CS2 pouch cells are ~1.1 Ah — pass `rated_capacity_ah` if you know the nameplate.
 
-### 2. Optional Python sidecar
+### 2. Optional Python sidecar (and Linux/browser demo)
 
 ```powershell
 $env:PYTHONPATH = "ml"
 python -m batteryhealth.service.app --port 8765
 ```
 
+On Linux / macOS:
+
+```bash
+PYTHONPATH=ml python -m batteryhealth.service.app --host 127.0.0.1 --port 8765
+```
+
+Open http://127.0.0.1:8765 for a browser demo of the three desktop pages (lifecycle dashboard, RUL forecast, stress simulator) running on the same ONNX graphs. The WinUI app remains the Windows desktop UI.
+
 - `GET /health`, `GET /metrics`
+- `GET /demo`, `GET /demo/B0005`, `GET /demo/calce`
+- `POST /workspace/forecast`, `POST /workspace/trajectory`
 - `POST /predict/soh`, `POST /predict/rul`
 - `POST /simulate/stress`
 - `POST /parse/nasa` (upload `.mat`), `POST /parse/calce`
 
-The WinUI app does **not** require this process. Use it to ingest raw `.mat` files or to call the same math from another tool.
+The WinUI app does **not** require this process. Use it to ingest raw `.mat` files, to call the same math from another tool, or to run the browser demo on a non-Windows machine.
 
 ### 3. Build Core / CLI (any OS with .NET 8)
 

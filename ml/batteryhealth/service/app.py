@@ -2,6 +2,8 @@
 
 The WinUI app can run SoH/RUL fully offline via ONNX Runtime. This service adds
 NASA/CALCE parsing, feature extraction, noise studies, and the same stress math.
+On Linux (and any browser) it also serves a three-page demo UI that mirrors
+the desktop Lifecycle / Forecast / Simulator screens.
 """
 
 from __future__ import annotations
@@ -13,19 +15,32 @@ from typing import Any
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from batteryhealth.config import (
     DEFAULT_MODEL_DIR,
     DEFAULT_PROCESSED_DIR,
     EOL_CAPACITY_FRACTION,
+    REPO_ROOT,
     RUL_FEATURE_COLUMNS,
     SOH_FEATURE_COLUMNS,
 )
 from batteryhealth.features import extract_cycle_features, feature_vector
 from batteryhealth.parsers.calce import parse_calce
+from batteryhealth.parsers.canonical import dict_to_summary
 from batteryhealth.parsers.nasa import parse_nasa_mat
+from batteryhealth.service.workspace import (
+    battery_summary,
+    cycle_at,
+    predict_cycle,
+    predict_trajectory,
+)
 from batteryhealth.simulate import simulate_stress
+
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures"
 
 app = FastAPI(
     title="BatteryHealth ML Service",
@@ -86,6 +101,11 @@ class StressRequest(BaseModel):
     discharge_c_rate: float = 1.0
     current_cycle: int | None = None
     eol_fraction: float = EOL_CAPACITY_FRACTION
+
+
+class WorkspaceRequest(BaseModel):
+    battery: dict[str, Any]
+    cycle_index: int | None = None
 
 
 @app.get("/health")
@@ -202,12 +222,83 @@ async def parse_calce_upload(file: UploadFile = File(...)) -> dict[str, Any]:
         tmp.unlink(missing_ok=True)
 
 
+def _demo_catalog() -> dict[str, Path]:
+    return {
+        "B0005": FIXTURES_DIR / "B0005.sample.json",
+        "tiny": FIXTURES_DIR / "tiny_battery.json",
+        "calce": FIXTURES_DIR / "calce_sample.csv",
+    }
+
+
+def _load_demo(battery_id: str) -> dict[str, Any]:
+    catalog = _demo_catalog()
+    key = battery_id.strip()
+    path = catalog.get(key) or catalog.get(key.upper())
+    if path is None or not path.exists():
+        processed = DEFAULT_PROCESSED_DIR / f"{key.upper()}.json"
+        if processed.exists():
+            return json.loads(processed.read_text())
+        raise HTTPException(404, f"Unknown demo battery {battery_id!r}")
+    if path.suffix.lower() in {".csv", ".xlsx", ".xls"}:
+        return parse_calce(path)
+    return json.loads(path.read_text())
+
+
+@app.get("/")
+def index() -> FileResponse:
+    html = STATIC_DIR / "index.html"
+    if not html.exists():
+        raise HTTPException(404, "Demo UI is missing")
+    return FileResponse(html)
+
+
+@app.get("/demo")
+def list_demos() -> dict[str, Any]:
+    items = []
+    for demo_id, path in _demo_catalog().items():
+        if not path.exists():
+            continue
+        record = _load_demo(demo_id)
+        items.append({"id": demo_id, "file": path.name, **dict_to_summary(record)})
+    return {"demos": items}
+
+
+@app.get("/demo/{battery_id}")
+def demo_battery(battery_id: str) -> dict[str, Any]:
+    record = _load_demo(battery_id)
+    return {"summary": battery_summary(record), "battery": record}
+
+
+@app.post("/workspace/forecast")
+def workspace_forecast(req: WorkspaceRequest) -> dict[str, Any]:
+    try:
+        cycle = cycle_at(req.battery, req.cycle_index)
+        return predict_cycle(_ort_predict, req.battery, cycle)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/workspace/trajectory")
+def workspace_trajectory(req: WorkspaceRequest) -> dict[str, Any]:
+    try:
+        return {"points": predict_trajectory(_ort_predict, req.battery)}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
 @app.get("/sample/{battery_id}")
 def sample_battery(battery_id: str) -> dict[str, Any]:
     path = DEFAULT_PROCESSED_DIR / f"{battery_id.upper()}.json"
-    if not path.exists():
-        raise HTTPException(404, f"{battery_id} not processed yet")
-    return json.loads(path.read_text())
+    if path.exists():
+        return json.loads(path.read_text())
+    try:
+        return _load_demo(battery_id)
+    except HTTPException:
+        raise HTTPException(404, f"{battery_id} not processed yet") from None
+
+
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 def main(argv: list[str] | None = None) -> None:

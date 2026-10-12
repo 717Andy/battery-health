@@ -16,14 +16,12 @@
 
             <TextBlock Text="Ambient temperature (°C)" FontWeight="SemiBold"/>
             <Slider Minimum="-10" Maximum="55" StepFrequency="1"
-                    Value="{x:Bind ViewModel.AmbientC, Mode=TwoWay}"
-                    ValueChanged="OnChanged"/>
+                    Value="{x:Bind ViewModel.AmbientC, Mode=TwoWay}"/>
             <TextBlock Text="{x:Bind ViewModel.AmbientC, Mode=OneWay}"/>
 
             <TextBlock Text="Discharge C-rate" FontWeight="SemiBold"/>
             <Slider Minimum="0.2" Maximum="3.0" StepFrequency="0.1"
-                    Value="{x:Bind ViewModel.CRate, Mode=TwoWay}"
-                    ValueChanged="OnChanged"/>
+                    Value="{x:Bind ViewModel.CRate, Mode=TwoWay}"/>
             <TextBlock Text="{x:Bind ViewModel.CRate, Mode=OneWay}"/>
 
             <TextBlock Text="{x:Bind ViewModel.AfText, Mode=OneWay}" FontWeight="SemiBold" TextWrapping="Wrap"/>

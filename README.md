@@ -50,6 +50,8 @@ CALCE CSV/XLSX ──► Python or Core parser ──┘
 
 Training set: NASA B0005, B0006, B0007, B0018 — **636 discharge cycles**. Hold-out cell: **B0018** (132 cycles). Also reported: leave-one-battery-out (LOBO).
 
+The tables below are **hold-out-excluded** fits: the scored cell was not in that fit. The files in `artifacts/models/` are a **separate all-rows fit** of the same gradient-boosting pipeline. The forecast page states that difference. `artifacts/metrics.json` also records a nested SoH→RUL leave-one-battery-out (predicted SoH fed into RUL, which is the inference graph), ablations that drop `energy_wh`+`duration_s` and `cycle_index`, and an `eolCensoring` flag. B0007 never reaches 1.4 Ah, so its RUL labels are right-censored and are left out of `pooledExcludingCensored`.
+
 ### SoH (fraction of 2.0 Ah; features are curve stats only — no capacity column)
 
 | Model | B0018 RMSE | B0018 MAE | B0018 R² | LOBO pooled RMSE |
@@ -74,7 +76,7 @@ ONNX vs sklearn on 32 hold-out rows: SoH max \|Δ\| = 1.1×10⁻⁷, RUL max \|�
 
 ### Robustness to added sensor noise
 
-Features are recomputed after i.i.d. Gaussian noise at *σ = f × channel std* on voltage, current, and temperature (production GBR, all 636 cycles):
+Features are recomputed after i.i.d. Gaussian noise at *σ = f × channel std* on voltage, current, and temperature (production GBR, all 636 cycles). The *f = 0* row is **in-sample**: the shipped model scored on the cycles it was fit on, not a hold-out.
 
 | Noise *f* | SoH RMSE | RUL RMSE |
 | ---: | ---: | ---: |
@@ -95,7 +97,7 @@ Mirrored in Python (`ml/batteryhealth/simulate.py`) and C# (`DegradationSimulato
 
 - Temperature: Arrhenius, \(A_T = \exp\left[\frac{E_a}{k}\left(\frac{1}{T_\mathrm{ref}}-\frac{1}{T}\right)\right]\), \(E_a = 0.50\,\mathrm{eV}\), \(T_\mathrm{ref} = 24\,^\circ\mathrm{C}\) (NASA room-temp protocol).
 - C-rate: \((C / 1\mathrm{C})^{0.60}\).
-- Remaining fade after the selected cycle is multiplied by \(A_T \cdot A_C\). This is a **data-driven / semi-empirical** overlay, not a finite-element twin.
+- Remaining fade after the selected cycle is multiplied by \(A_T \cdot A_C\). This is a **scenario overlay**. Ea and the C-rate exponent were not identified on the NASA cells, and the simulator says so.
 
 ## Compared with the products in the pitch
 
@@ -223,6 +225,8 @@ PYTHONPATH=ml python -m pytest ml/tests -q
 dotnet test BatteryHealth.Linux.slnf
 # or: dotnet test tests/BatteryHealth.Core.Tests/BatteryHealth.Core.Tests.csproj
 ```
+
+GitHub Actions (`.github/workflows/ci.yml`) runs those tests and a CLI `forecast` / `simulate` smoke on the fixtures. It does not retrain; the committed ONNX files are the artifact under test.
 
 `BatteryHealth.sln` also contains the WinUI app. Restoring that `.csproj` on Linux fails with `NETSDK1100` (Windows targeting). Use the Linux solution filter above, or open the full sln only on Windows.
 

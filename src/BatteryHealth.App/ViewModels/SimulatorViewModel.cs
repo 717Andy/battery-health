@@ -1,5 +1,6 @@
 using BatteryHealth.App.Charts;
 using BatteryHealth.Core.Domain;
+using BatteryHealth.Core.Simulation;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LiveChartsCore;
@@ -15,8 +16,7 @@ public partial class SimulatorViewModel : ObservableObject
     [ObservableProperty] private double cRate = 1.0;
     [ObservableProperty] private string afText = "AF = 1.00";
     [ObservableProperty] private string rulCompare = "Load a battery to simulate thermal and load stress.";
-    [ObservableProperty] private string physicsNote =
-        "Arrhenius temperature acceleration (Ea = 0.50 eV) × C-rate power law (C/1C)^0.60, referenced to the NASA 24 °C / 1C protocol.";
+    [ObservableProperty] private string physicsNote = DegradationSimulator.ScenarioClaim;
     [ObservableProperty] private ISeries[] fadeSeries = [];
 
     public Axis[] CycleAxis { get; } = ChartFactory.CycleAxis();
@@ -34,7 +34,6 @@ public partial class SimulatorViewModel : ObservableObject
     {
         AmbientC = 24;
         CRate = 1.0;
-        Recalculate();
     }
 
     public void Recalculate()

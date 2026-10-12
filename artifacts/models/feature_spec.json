@@ -55,5 +55,25 @@
   "eolCapacityFraction": 0.7,
   "eolCapacityFractionOem": 0.8,
   "ratedCapacityAh": 2.0,
-  "notes": "NASA PCoE official end-of-life is 70% of rated capacity (2.0 Ah \u2192 1.4 Ah). The 80% threshold is the common EV warranty / replacement line."
+  "notes": "NASA PCoE official end-of-life is 70% of rated capacity (2.0 Ah \u2192 1.4 Ah). The 80% threshold is the common EV warranty / replacement line.",
+  "modelCard": {
+    "family": "sklearn Pipeline(StandardScaler + GradientBoostingRegressor)",
+    "fitScope": "all-rows",
+    "holdoutMetricsFitScope": "holdout-excluded",
+    "eolCapacityFraction": 0.7,
+    "eolDefinition": "Remaining useful life is cycles until discharge capacity falls to 70% of rated capacity (NASA PCoE official stop criterion: 2.0 Ah \u2192 1.4 Ah).",
+    "nRows": 636,
+    "batteries": [
+      "B0005",
+      "B0006",
+      "B0007",
+      "B0018"
+    ],
+    "applicability": "NASA PCoE constant-current 18650 discharges near 24 \u00b0C. energy_wh and duration_s track delivered capacity on this protocol; cycle_index tracks position along a cell's own fade curve.",
+    "stressModel": {
+      "kind": "scenario",
+      "identifiedOnDataset": false,
+      "claim": "Scenario acceleration referenced to 24 \u00b0C and 1C. Ea = 0.50 eV and the C-rate exponent 0.60 were not identified on the NASA cells."
+    }
+  }
 }

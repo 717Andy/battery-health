@@ -66,13 +66,27 @@ public partial class ForecastViewModel : ObservableObject
 
         if (Workspace.Battery is { } rec)
         {
+            var snapshot = Workspace.Trajectory;
+            if (snapshot is null || !ReferenceEquals(snapshot.Battery, rec))
+            {
+                SohSeries = [];
+                return;
+            }
+
+            if (snapshot.Error is not null)
+            {
+                Workspace.ErrorMessage = snapshot.Error;
+                SohSeries = [];
+                return;
+            }
+
             try
             {
-                var traj = Workspace.Service.ForecastTrajectory(rec);
-                SohSeries = ChartFactory.SohSeries(traj, rec);
+                SohSeries = ChartFactory.SohSeries(snapshot.Points, rec);
             }
-            catch
+            catch (Exception ex)
             {
+                Workspace.ErrorMessage = ex.Message;
                 SohSeries = [];
             }
         }
@@ -124,18 +138,69 @@ public partial class ForecastViewModel : ObservableObject
             }
 
             using var doc = JsonDocument.Parse(File.ReadAllText(candidate));
-            var root = doc.RootElement;
-            if (root.TryGetProperty("rul", out var rul) &&
-                rul.TryGetProperty("gbr", out var gbr) &&
-                gbr.TryGetProperty("holdout", out var hold))
-            {
-                MetricsText =
-                    $"Held-out B0018 (GBR ONNX): RUL RMSE {hold.GetProperty("rmse").GetDouble():0.0} cycles, " +
-                    $"MAE {hold.GetProperty("mae").GetDouble():0.0}, R² {hold.GetProperty("r2").GetDouble():0.00}. " +
-                    "SoH GBR RMSE 0.0067 (fraction). See README for leave-one-battery-out and noise robustness.";
-            }
-
+            MetricsText = DescribeMetrics(doc.RootElement);
             return;
         }
+    }
+
+    internal static string DescribeMetrics(JsonElement root)
+    {
+        var family = "gradient boosting";
+        var fitScope = "all-rows";
+        var holdoutScope = "holdout-excluded";
+        if (root.TryGetProperty("productionModel", out var prod))
+        {
+            if (prod.TryGetProperty("family", out var fam) && fam.ValueKind == JsonValueKind.String)
+            {
+                family = fam.GetString() ?? family;
+            }
+            else if (prod.TryGetProperty("type", out var type) && type.ValueKind == JsonValueKind.String)
+            {
+                family = type.GetString() ?? family;
+            }
+
+            if (prod.TryGetProperty("fitScope", out var scope))
+            {
+                fitScope = scope.GetString() ?? fitScope;
+            }
+
+            if (prod.TryGetProperty("holdoutMetricsFitScope", out var holdScope))
+            {
+                holdoutScope = holdScope.GetString() ?? holdoutScope;
+            }
+        }
+
+        var nRows = root.TryGetProperty("nRows", out var rows) ? rows.GetInt32() : 0;
+        var batteries = root.TryGetProperty("batteries", out var bats) && bats.ValueKind == JsonValueKind.Array
+            ? string.Join(", ", bats.EnumerateArray().Select(b => b.GetString()))
+            : "the training cells";
+        var holdoutBattery = root.TryGetProperty("holdoutBattery", out var holdId)
+            ? holdId.GetString() ?? "hold-out"
+            : "hold-out";
+
+        var rulText = ReadHoldout(root, "rul");
+        var sohText = ReadHoldout(root, "soh");
+        return
+            $"Shipped ONNX ({family}) fit scope: {fitScope}" +
+            (nRows > 0 ? $" ({nRows} rows, {batteries}). " : ". ") +
+            $"The {holdoutBattery} numbers use fit scope {holdoutScope}, so they are not the error of the files on disk. " +
+            $"RUL {rulText}. SoH {sohText}.";
+    }
+
+    private static string ReadHoldout(JsonElement root, string target)
+    {
+        if (root.TryGetProperty(target, out var block) &&
+            block.TryGetProperty("gbr", out var gbr) &&
+            gbr.TryGetProperty("holdout", out var hold))
+        {
+            var rmse = hold.GetProperty("rmse").GetDouble();
+            var mae = hold.GetProperty("mae").GetDouble();
+            var r2 = hold.GetProperty("r2").GetDouble();
+            return target == "rul"
+                ? $"RMSE {rmse:0.0} cycles, MAE {mae:0.0}, R² {r2:0.00}"
+                : $"RMSE {rmse:0.0000} (fraction), MAE {mae:0.0000}, R² {r2:0.00}";
+        }
+
+        return "hold-out metrics unavailable";
     }
 }

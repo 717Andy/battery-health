@@ -54,8 +54,6 @@
                         Maximum="{x:Bind ViewModel.CycleMax, Mode=OneWay}"
                         Value="{x:Bind ViewModel.CycleSlider, Mode=TwoWay}"
                         ValueChanged="OnCycleChanged"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                           Text="{x:Bind ViewModel.Workspace.ErrorMessage, Mode=OneWay}"/>
                 <TextBlock TextWrapping="Wrap" Opacity="0.75"
                            Text="Voltage, current, and temperature overlay for the selected cycle. NASA impedance spectra are skipped. Charge traces plot when the file includes them."/>
             </StackPanel>

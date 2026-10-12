@@ -15,15 +15,26 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from batteryhealth.config import (
+    APPLICABILITY,
     DEFAULT_MODEL_DIR,
     DEFAULT_PROCESSED_DIR,
     EOL_CAPACITY_FRACTION,
+    HOLDOUT_METRICS_FIT_SCOPE,
     NASA_CITATION,
+    PRODUCTION_FAMILY,
+    PRODUCTION_FIT_SCOPE,
     RUL_FEATURE_COLUMNS,
     SOH_FEATURE_COLUMNS,
 )
 from batteryhealth.dataset import records_to_frame, split_leave_one_battery_out
-from batteryhealth.evaluate import leave_one_battery_out, noise_robustness, regression_metrics
+from batteryhealth.evaluate import (
+    censoring_report,
+    feature_ablations,
+    leave_one_battery_out,
+    nested_soh_to_rul,
+    noise_robustness,
+    regression_metrics,
+)
 from batteryhealth.export_onnx import export_sklearn, feature_spec, verify_onnx
 from batteryhealth.parsers.nasa import parse_nasa_mat
 
@@ -197,6 +208,23 @@ def _eval_family(frame: pd.DataFrame, feature_cols: tuple[str, ...], target: str
     return report
 
 
+def production_honesty_report(
+    frame: pd.DataFrame,
+    *,
+    fit,
+    predict,
+) -> dict[str, Any]:
+    """Nested SoH→RUL, protocol ablations, and censored-EOL flags for the production family."""
+    return {
+        "eolCensoring": censoring_report(frame),
+        "rulNestedSoh": nested_soh_to_rul(frame, fit=fit, predict=predict),
+        "featureAblations": {
+            "soh": feature_ablations(frame, feature_cols=SOH_FEATURE_COLUMNS, target="soh", fit=fit, predict=predict),
+            "rul": feature_ablations(frame, feature_cols=RUL_FEATURE_COLUMNS, target="rul", fit=fit, predict=predict),
+        },
+    }
+
+
 def _pick_best(report: dict[str, Any]) -> str:
     # Prefer tree models that convert cleanly; pick lowest holdout RMSE.
     ranked = sorted(
@@ -250,6 +278,8 @@ def train_and_export(
         rul_input=rul_check["inputName"],
         soh_output=soh_check["outputName"],
         rul_output=rul_check["outputName"],
+        n_rows=int(len(frame)),
+        batteries=sorted(frame["battery_id"].unique().tolist()),
     )
     (model_dir / "feature_spec.json").write_text(json.dumps(spec, indent=2))
 
@@ -260,6 +290,13 @@ def train_and_export(
         return rul_prod.predict(x)
 
     noise = noise_robustness(records, soh_predict=soh_predict, rul_predict=rul_predict)
+
+    def _fit_gbr(x, y):
+        model = _gbr()
+        model.fit(x, y)
+        return model
+
+    honesty = production_honesty_report(frame, fit=_fit_gbr, predict=_predict_any)
 
     metrics = {
         "citation": NASA_CITATION,
@@ -275,13 +312,22 @@ def train_and_export(
         "soh": soh_report,
         "rul": rul_report,
         "productionModel": {
-            "type": "sklearn Pipeline(StandardScaler + GradientBoostingRegressor)",
+            "type": PRODUCTION_FAMILY,
+            "family": PRODUCTION_FAMILY,
+            "fitScope": PRODUCTION_FIT_SCOPE,
+            "holdoutMetricsFitScope": HOLDOUT_METRICS_FIT_SCOPE,
+            "applicability": APPLICABILITY,
             "reason": (
                 "GBR converts reliably through skl2onnx and matches ONNX Runtime on Linux/.NET. "
-                "XGBoost and a PyTorch MLP are trained for comparison; see soh/rul reports."
+                "XGBoost and a PyTorch MLP are trained for comparison; see soh/rul reports. "
+                "soh.onnx and rul.onnx are the all-rows fit. Hold-out and leave-one-battery-out "
+                "blocks are a different fit that excludes the scored cell."
             ),
             "onnxVerification": {"soh": soh_check, "rul": rul_check},
         },
+        "eolCensoring": honesty["eolCensoring"],
+        "rulNestedSoh": honesty["rulNestedSoh"],
+        "featureAblations": honesty["featureAblations"],
         "noiseRobustness": noise,
         "bestSohByHoldoutRmse": _pick_best(soh_report),
         "bestRulByHoldoutRmse": _pick_best(rul_report),

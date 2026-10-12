@@ -13,6 +13,7 @@ from batteryhealth.config import (
     RATED_CAPACITY_AH,
     REF_C_RATE,
     REF_TEMPERATURE_C,
+    STRESS_CLAIM,
 )
 from batteryhealth.parsers.canonical import discharge_cycles
 
@@ -127,6 +128,8 @@ def simulate_stress(
     stress_rul = max(0, stress_eol - n0)
 
     return {
+        "claim": STRESS_CLAIM,
+        "identifiedOnDataset": False,
         "accelerationFactor": af,
         "temperatureAcceleration": temperature_acceleration(ambient_c),
         "cRateAcceleration": crate_acceleration(c_rate),

@@ -35,6 +35,8 @@ def leave_one_battery_out(
     per: dict[str, dict[str, float]] = {}
     all_true: list[np.ndarray] = []
     all_pred: list[np.ndarray] = []
+    uncensored_true: list[np.ndarray] = []
+    uncensored_pred: list[np.ndarray] = []
     for holdout in batteries:
         train = frame[frame["battery_id"] != holdout]
         test = frame[frame["battery_id"] == holdout]
@@ -44,8 +46,162 @@ def leave_one_battery_out(
         per[str(holdout)] = regression_metrics(y, pred)
         all_true.append(y)
         all_pred.append(pred)
+        if not _battery_censored(test):
+            uncensored_true.append(y)
+            uncensored_pred.append(pred)
     pooled = regression_metrics(np.concatenate(all_true), np.concatenate(all_pred))
-    return {"perBattery": per, "pooled": pooled, "batteries": batteries}
+    report: dict[str, Any] = {"perBattery": per, "pooled": pooled, "batteries": batteries}
+    if uncensored_true and len(uncensored_true) < len(all_true):
+        report["pooledExcludingCensored"] = regression_metrics(
+            np.concatenate(uncensored_true),
+            np.concatenate(uncensored_pred),
+        )
+    return report
+
+
+def _battery_censored(frame: pd.DataFrame) -> bool:
+    if "eol_censored" not in frame.columns or frame.empty:
+        return False
+    return bool(frame["eol_censored"].iloc[0])
+
+
+def censoring_report(frame: pd.DataFrame) -> dict[str, Any]:
+    """Per-cell flag for right-censored 70% EOL labels.
+
+    Censored cells never reached the capacity threshold, so a zero RUL on the last
+    cycle is not an observed failure. Pooled scores that treat those labels as exact
+    are reported separately from `pooledExcludingCensored`.
+    """
+    batteries: dict[str, Any] = {}
+    for battery_id, sub in frame.groupby("battery_id", sort=True):
+        censored = _battery_censored(sub)
+        batteries[str(battery_id)] = {
+            "censored": censored,
+            "eolCycle": float(sub["eol_cycle"].iloc[0]) if "eol_cycle" in sub.columns else None,
+            "n": int(len(sub)),
+            "minCapacityAh": float(sub["capacity_ah"].min()) if "capacity_ah" in sub.columns else None,
+        }
+    censored_ids = [name for name, body in batteries.items() if body["censored"]]
+    return {
+        "definition": (
+            "censored is true when discharge capacity never reaches eolCapacityFraction of rated capacity. "
+            "Those cells are omitted from pooledExcludingCensored."
+        ),
+        "batteries": batteries,
+        "censoredBatteries": censored_ids,
+    }
+
+
+def nested_soh_to_rul(
+    frame: pd.DataFrame,
+    *,
+    soh_cols: tuple[str, ...] = SOH_FEATURE_COLUMNS,
+    rul_cols: tuple[str, ...] = RUL_FEATURE_COLUMNS,
+    fit: Callable[[np.ndarray, np.ndarray], Any],
+    predict: Callable[[Any, np.ndarray], np.ndarray],
+) -> dict[str, Any]:
+    """Leave-one-battery-out RUL using predicted SoH on the held-out cell.
+
+    RUL is still trained on measured SoH. Scoring replaces that column with the SoH
+    model, which is the graph used when a log has no coulomb-counted capacity.
+    """
+    batteries = sorted(frame["battery_id"].unique())
+    per: dict[str, Any] = {}
+    all_true: list[np.ndarray] = []
+    all_pred: list[np.ndarray] = []
+    uncensored_true: list[np.ndarray] = []
+    uncensored_pred: list[np.ndarray] = []
+    for holdout in batteries:
+        train = frame[frame["battery_id"] != holdout]
+        test = frame[frame["battery_id"] == holdout].copy()
+        soh_model = fit(
+            train[list(soh_cols)].to_numpy(dtype=np.float32),
+            train["soh"].to_numpy(dtype=float),
+        )
+        pred_soh = np.asarray(
+            predict(soh_model, test[list(soh_cols)].to_numpy(dtype=np.float32)),
+            dtype=float,
+        ).reshape(-1)
+        rul_model = fit(
+            train[list(rul_cols)].to_numpy(dtype=np.float32),
+            train["rul"].to_numpy(dtype=float),
+        )
+        scored = test.copy()
+        scored["soh"] = pred_soh
+        pred_rul = np.asarray(
+            predict(rul_model, scored[list(rul_cols)].to_numpy(dtype=np.float32)),
+            dtype=float,
+        ).reshape(-1)
+        y = test["rul"].to_numpy(dtype=float)
+        metrics = regression_metrics(y, pred_rul)
+        metrics["sohRmse"] = regression_metrics(test["soh"].to_numpy(dtype=float), pred_soh)["rmse"]
+        metrics["censored"] = _battery_censored(test)
+        per[str(holdout)] = metrics
+        all_true.append(y)
+        all_pred.append(pred_rul)
+        if not metrics["censored"]:
+            uncensored_true.append(y)
+            uncensored_pred.append(pred_rul)
+    report: dict[str, Any] = {
+        "description": (
+            "RUL leave-one-battery-out scored with SoH predicted from the other cells. "
+            "Teacher-forced RUL metrics, which use measured SoH, stay in rul.*.leaveOneBatteryOut."
+        ),
+        "family": "sklearn Pipeline(StandardScaler + GradientBoostingRegressor)",
+        "fitScope": "holdout-excluded",
+        "perBattery": per,
+        "pooled": regression_metrics(np.concatenate(all_true), np.concatenate(all_pred)),
+        "batteries": [str(b) for b in batteries],
+    }
+    if uncensored_true:
+        report["pooledExcludingCensored"] = regression_metrics(
+            np.concatenate(uncensored_true),
+            np.concatenate(uncensored_pred),
+        )
+    return report
+
+
+def feature_ablations(
+    frame: pd.DataFrame,
+    *,
+    feature_cols: tuple[str, ...],
+    target: str,
+    fit: Callable[[np.ndarray, np.ndarray], Any],
+    predict: Callable[[Any, np.ndarray], np.ndarray],
+    holdout: str | None = None,
+) -> dict[str, Any]:
+    """Same leave-one-battery-out split after dropping protocol-proxy columns."""
+    drops = {
+        "dropEnergyAndDuration": ("energy_wh", "duration_s"),
+        "dropCycleIndex": ("cycle_index",),
+    }
+    if holdout is None:
+        holdout = "B0018" if "B0018" in set(frame["battery_id"]) else str(frame["battery_id"].iloc[-1])
+    report: dict[str, Any] = {
+        "holdoutBattery": holdout,
+        "target": target,
+        "family": "sklearn Pipeline(StandardScaler + GradientBoostingRegressor)",
+    }
+    for name, dropped in drops.items():
+        cols = tuple(col for col in feature_cols if col not in dropped)
+        train = frame[frame["battery_id"] != holdout]
+        test = frame[frame["battery_id"] == holdout]
+        model = fit(train[list(cols)].to_numpy(dtype=np.float32), train[target].to_numpy(dtype=float))
+        pred = np.asarray(predict(model, test[list(cols)].to_numpy(dtype=np.float32)), dtype=float).reshape(-1)
+        lobo = leave_one_battery_out(
+            frame,
+            feature_cols=cols,
+            target=target,
+            fit=fit,
+            predict=predict,
+        )
+        report[name] = {
+            "dropped": list(dropped),
+            "columns": list(cols),
+            "holdout": regression_metrics(test[target].to_numpy(dtype=float), pred),
+            "leaveOneBatteryOut": lobo,
+        }
+    return report
 
 
 def noise_robustness(
@@ -99,9 +255,16 @@ def noise_robustness(
                 soh_pred.append(pred_soh)
                 rul_true.append(rul_by_cycle.get(int(cycle["cycleIndex"]), 0.0))
                 rul_pred.append(pred_rul)
-        results[str(level)] = {
+        scope = "in-sample" if level == 0.0 else "in-sample-perturbed"
+        block: dict[str, Any] = {
             "sigmaFrac": level,
+            "scope": scope,
             "soh": regression_metrics(soh_true, soh_pred),
             "rul": regression_metrics(rul_true, rul_pred),
         }
+        if level == 0.0:
+            block["note"] = (
+                "Production model scored on the same cycles it was fit on. This is not a hold-out number."
+            )
+        results[str(level)] = block
     return results

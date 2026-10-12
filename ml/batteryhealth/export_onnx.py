@@ -7,7 +7,16 @@ from typing import Any
 
 import numpy as np
 
-from batteryhealth.config import RUL_FEATURE_COLUMNS, SOH_FEATURE_COLUMNS
+from batteryhealth.config import (
+    APPLICABILITY,
+    EOL_CAPACITY_FRACTION,
+    HOLDOUT_METRICS_FIT_SCOPE,
+    PRODUCTION_FAMILY,
+    PRODUCTION_FIT_SCOPE,
+    RUL_FEATURE_COLUMNS,
+    SOH_FEATURE_COLUMNS,
+    STRESS_CLAIM,
+)
 
 
 def _write(path: Path, model_bytes: bytes) -> None:
@@ -78,7 +87,15 @@ def verify_onnx(path: Path, x: np.ndarray, expected: np.ndarray, atol: float = 1
     }
 
 
-def feature_spec(*, soh_input: str, rul_input: str, soh_output: str, rul_output: str) -> dict[str, Any]:
+def feature_spec(
+    *,
+    soh_input: str,
+    rul_input: str,
+    soh_output: str,
+    rul_output: str,
+    n_rows: int | None = None,
+    batteries: list[str] | None = None,
+) -> dict[str, Any]:
     return {
         "soh": {
             "model": "soh.onnx",
@@ -92,11 +109,29 @@ def feature_spec(*, soh_input: str, rul_input: str, soh_output: str, rul_output:
             "outputName": rul_output,
             "columns": list(RUL_FEATURE_COLUMNS),
         },
-        "eolCapacityFraction": 0.70,
+        "eolCapacityFraction": EOL_CAPACITY_FRACTION,
         "eolCapacityFractionOem": 0.80,
         "ratedCapacityAh": 2.0,
         "notes": (
             "NASA PCoE official end-of-life is 70% of rated capacity (2.0 Ah → 1.4 Ah). "
             "The 80% threshold is the common EV warranty / replacement line."
         ),
+        "modelCard": {
+            "family": PRODUCTION_FAMILY,
+            "fitScope": PRODUCTION_FIT_SCOPE,
+            "holdoutMetricsFitScope": HOLDOUT_METRICS_FIT_SCOPE,
+            "eolCapacityFraction": EOL_CAPACITY_FRACTION,
+            "eolDefinition": (
+                "Remaining useful life is cycles until discharge capacity falls to "
+                "70% of rated capacity (NASA PCoE official stop criterion: 2.0 Ah → 1.4 Ah)."
+            ),
+            "nRows": n_rows,
+            "batteries": batteries or [],
+            "applicability": APPLICABILITY,
+            "stressModel": {
+                "kind": "scenario",
+                "identifiedOnDataset": False,
+                "claim": STRESS_CLAIM,
+            },
+        },
     }

@@ -39,3 +39,5 @@ def test_stress_shortens_rul():
     assert result["accelerationFactor"] > 1.0
     assert result["stressedRulCycles"] <= result["baselineRulCycles"]
     assert result["stressed"][-1]["capacityAh"] <= result["baseline"][-1]["capacityAh"]
+    assert result["identifiedOnDataset"] is False
+    assert "not identified" in result["claim"]

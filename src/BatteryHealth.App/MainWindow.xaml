@@ -7,6 +7,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="48"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid Background="{ThemeResource LayerOnMicaBaseAltFillColorDefaultBrush}" Padding="16,0">
             <Grid.ColumnDefinitions>
@@ -34,5 +35,20 @@
             </NavigationView.MenuItems>
             <Frame x:Name="ContentFrame"/>
         </NavigationView>
+
+        <Grid Grid.Row="2" Padding="16,8" ColumnSpacing="12"
+              Background="{ThemeResource LayerOnMicaBaseAltFillColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ProgressRing Width="16" Height="16" IsActive="{x:Bind Workspace.IsBusy, Mode=OneWay}"/>
+            <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Text="{x:Bind Workspace.Status, Mode=OneWay}" Opacity="0.85" TextWrapping="Wrap"/>
+                <TextBlock Text="{x:Bind Workspace.ErrorMessage, Mode=OneWay}"
+                           Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

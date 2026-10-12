@@ -32,15 +32,15 @@ public sealed partial class DashboardPage : Page
         var file = await picker.PickSingleFileAsync();
         if (file is not null)
         {
-            ViewModel.Workspace.LoadFromPath(file.Path);
+            await ViewModel.Workspace.LoadFromPath(file.Path);
             ViewModel.Refresh();
         }
     }
 
-    private void OnLoadDemo(object sender, RoutedEventArgs e)
+    private async void OnLoadDemo(object sender, RoutedEventArgs e)
     {
         var demo = Path.Combine(AppContext.BaseDirectory, "Assets", "B0005.sample.json");
-        ViewModel.Workspace.LoadFromPath(demo);
+        await ViewModel.Workspace.LoadFromPath(demo);
         ViewModel.Refresh();
     }
 

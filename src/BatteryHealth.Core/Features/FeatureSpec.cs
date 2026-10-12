@@ -23,6 +23,9 @@ public sealed class FeatureSpec
     [JsonPropertyName("notes")]
     public string? Notes { get; set; }
 
+    [JsonPropertyName("modelCard")]
+    public ModelCard Card { get; set; } = new();
+
     public static FeatureSpec Load(string path) =>
         JsonSerializer.Deserialize<FeatureSpec>(File.ReadAllText(path), JsonOptions)
         ?? throw new InvalidOperationException($"Could not read feature spec from {path}");
@@ -37,6 +40,30 @@ public sealed class FeatureSpec
     {
         PropertyNameCaseInsensitive = true,
     };
+}
+
+public sealed class ModelCard
+{
+    [JsonPropertyName("family")]
+    public string Family { get; set; } = "";
+
+    [JsonPropertyName("fitScope")]
+    public string FitScope { get; set; } = "";
+
+    [JsonPropertyName("holdoutMetricsFitScope")]
+    public string HoldoutMetricsFitScope { get; set; } = "";
+
+    [JsonPropertyName("eolDefinition")]
+    public string? EolDefinition { get; set; }
+
+    [JsonPropertyName("nRows")]
+    public int? NRows { get; set; }
+
+    [JsonPropertyName("batteries")]
+    public List<string> Batteries { get; set; } = [];
+
+    [JsonPropertyName("applicability")]
+    public string? Applicability { get; set; }
 }
 
 public sealed class ModelIo

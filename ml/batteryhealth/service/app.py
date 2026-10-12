@@ -7,6 +7,9 @@ NASA/CALCE parsing, feature extraction, noise studies, and the same stress math.
 from __future__ import annotations
 
 import json
+import os
+import re
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +43,34 @@ app.add_middleware(
 )
 
 _SESSIONS: dict[str, Any] = {}
+MAX_UPLOAD_BYTES = 64 * 1024 * 1024
+_NASA_SUFFIXES = {".mat"}
+_CALCE_SUFFIXES = {".csv", ".xlsx", ".xls"}
+
+
+def safe_upload_suffix(filename: str | None, allowed: set[str]) -> str:
+    """Keep only a basename suffix. Client paths are never used as a destination."""
+    name = Path(filename or "").name
+    suffix = Path(name).suffix.lower()
+    if suffix not in allowed or re.fullmatch(r"\.[a-z0-9]{1,8}", suffix) is None:
+        raise HTTPException(400, f"Unsupported file type '{suffix or 'none'}'")
+    return suffix
+
+
+async def read_limited(file: UploadFile, limit: int | None = None) -> bytes:
+    cap = MAX_UPLOAD_BYTES if limit is None else limit
+    data = await file.read(cap + 1)
+    if len(data) > cap:
+        raise HTTPException(413, f"Upload exceeds {cap} bytes")
+    return data
+
+
+def write_temp(data: bytes, suffix: str) -> Path:
+    fd, name = tempfile.mkstemp(prefix="batteryhealth-", suffix=suffix)
+    os.close(fd)
+    path = Path(name)
+    path.write_bytes(data)
+    return path
 
 
 def _metrics_path() -> Path:
@@ -178,11 +209,9 @@ def stress(req: StressRequest) -> dict[str, Any]:
 
 @app.post("/parse/nasa")
 async def parse_nasa(file: UploadFile = File(...)) -> dict[str, Any]:
-    suffix = Path(file.filename or "upload.mat").suffix.lower()
-    if suffix != ".mat":
-        raise HTTPException(400, "Upload a NASA .mat file")
-    tmp = Path("/tmp") / (file.filename or "upload.mat")
-    tmp.write_bytes(await file.read())
+    suffix = safe_upload_suffix(file.filename, _NASA_SUFFIXES)
+    data = await read_limited(file)
+    tmp = write_temp(data, suffix)
     try:
         return parse_nasa_mat(tmp)
     finally:
@@ -191,9 +220,9 @@ async def parse_nasa(file: UploadFile = File(...)) -> dict[str, Any]:
 
 @app.post("/parse/calce")
 async def parse_calce_upload(file: UploadFile = File(...)) -> dict[str, Any]:
-    name = file.filename or "upload.csv"
-    tmp = Path("/tmp") / name
-    tmp.write_bytes(await file.read())
+    suffix = safe_upload_suffix(file.filename, _CALCE_SUFFIXES)
+    data = await read_limited(file)
+    tmp = write_temp(data, suffix)
     try:
         return parse_calce(tmp)
     except ValueError as exc:

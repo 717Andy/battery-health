@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using BatteryHealth.Core.Domain;
 using BatteryHealth.Core.Services;
+using BatteryHealth.Core.Simulation;
 
 static int Usage()
 {
@@ -66,6 +67,7 @@ switch (command)
         };
         var sim = service.Simulate(battery, scenario);
         Console.WriteLine($"AF={sim.AccelerationFactor:F3}  (T={sim.TemperatureAcceleration:F3} × C={sim.CRateAcceleration:F3})");
+        Console.WriteLine(DegradationSimulator.ScenarioClaim);
         Console.WriteLine($"baseline RUL={sim.BaselineRulCycles} cycles  stressed RUL={sim.StressedRulCycles} cycles");
         Console.WriteLine($"EOL cycle baseline/stressed = {sim.BaselineEolCycle} / {sim.StressedEolCycle}");
         return 0;

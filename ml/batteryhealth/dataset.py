@@ -11,6 +11,24 @@ from batteryhealth.config import EOL_CAPACITY_FRACTION, RATED_CAPACITY_AH, RUL_F
 from batteryhealth.parsers.canonical import discharge_cycles
 
 
+def eol_observation(
+    capacities: list[float],
+    *,
+    rated_capacity_ah: float = RATED_CAPACITY_AH,
+    eol_fraction: float = EOL_CAPACITY_FRACTION,
+) -> tuple[int, bool]:
+    """1-based discharge index of first cycle at or below EOL, and whether that index is censored.
+
+    `censored` is true when capacity never reaches the threshold. The returned index is then the
+    last measured cycle, and a zero RUL label at that cycle is not an observed end of life.
+    """
+    threshold = rated_capacity_ah * eol_fraction
+    for i, cap in enumerate(capacities, start=1):
+        if cap <= threshold:
+            return i, False
+    return max(len(capacities), 1), True
+
+
 def eol_cycle_index(
     capacities: list[float],
     *,
@@ -21,11 +39,12 @@ def eol_cycle_index(
 
     If the cell never reaches the threshold, returns the last cycle (right-censored).
     """
-    threshold = rated_capacity_ah * eol_fraction
-    for i, cap in enumerate(capacities, start=1):
-        if cap <= threshold:
-            return i
-    return max(len(capacities), 1)
+    index, _censored = eol_observation(
+        capacities,
+        rated_capacity_ah=rated_capacity_ah,
+        eol_fraction=eol_fraction,
+    )
+    return index
 
 
 def records_to_frame(
@@ -41,7 +60,7 @@ def records_to_frame(
         capacities = [float(c["capacityAh"]) for c in discharges if c.get("capacityAh")]
         if not capacities:
             continue
-        eol = eol_cycle_index(capacities, rated_capacity_ah=rated, eol_fraction=frac)
+        eol, censored = eol_observation(capacities, rated_capacity_ah=rated, eol_fraction=frac)
         for cycle in discharges:
             feats = cycle.get("features") or {}
             cap = cycle.get("capacityAh")
@@ -54,6 +73,7 @@ def records_to_frame(
             row["rul"] = float(max(0, eol - int(cycle["cycleIndex"])))
             row["battery_id"] = record.get("batteryId")
             row["eol_cycle"] = float(eol)
+            row["eol_censored"] = bool(censored)
             row["eol_fraction"] = frac
             row["rated_capacity_ah"] = rated
             rows.append(row)

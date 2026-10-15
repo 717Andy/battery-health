@@ -28,9 +28,15 @@ public partial class WorkspaceViewModel : ObservableObject
     [ObservableProperty] private string batteryTitle = "No battery loaded";
     [ObservableProperty] private string summaryLine = "Fleet diagnostic — local ONNX, no cloud.";
     [ObservableProperty] private TrajectorySnapshot? trajectory;
+    [ObservableProperty] private double scenarioAmbientC = 24;
+    [ObservableProperty] private double scenarioCRate = 1;
+
+    public static string DemoPath => Path.Combine(AppContext.BaseDirectory, "Assets", "B0005.sample.json");
 
     public IReadOnlyList<BatteryCycle> DischargeCycles =>
         Battery?.DischargeCycles.ToList() ?? [];
+
+    private int _ratedGeneration;
 
     public BatteryAnalyticsService Service => _service ??= new BatteryAnalyticsService();
 
@@ -90,7 +96,13 @@ public partial class WorkspaceViewModel : ObservableObject
             return;
         }
 
-        var next = Battery.CycleAt(cycleIndex);
+        var next = Battery.DischargeAt(cycleIndex);
+        if (next is null)
+        {
+            ErrorMessage = $"Cycle {cycleIndex} is not a discharge in this log.";
+            return;
+        }
+
         if (ReferenceEquals(next, SelectedCycle))
         {
             return;
@@ -145,10 +157,7 @@ public partial class WorkspaceViewModel : ObservableObject
             Error = trajectoryError,
         };
         BatteryTitle = $"{record.BatteryId} · {record.Source.ToUpperInvariant()}";
-        SummaryLine =
-            $"{discharges.Count} discharge cycles · rated {record.RatedCapacityAh:0.00} Ah · " +
-            $"EOL {record.EolCapacityFraction:P0} ({record.EolCapacityAh:0.00} Ah) · " +
-            $"capacity {first:0.000} → {last:0.000} Ah";
+        WriteSummary(discharges, first, last);
         Status = $"Loaded {path}";
         ErrorMessage = trajectoryError;
         SelectedCycle = discharges.LastOrDefault(c => c.HasTrace) ?? discharges.LastOrDefault();
@@ -163,6 +172,93 @@ public partial class WorkspaceViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    public async Task SetRatedCapacityAsync(double ampHours)
+    {
+        if (Battery is null || ampHours <= 0 || double.IsNaN(ampHours))
+        {
+            return;
+        }
+
+        var ratedChanged = Math.Abs(Battery.RatedCapacityAh - ampHours) > 1e-9;
+        Battery.RatedCapacityAh = ampHours;
+        Battery.RatedCapacityAssumed = false;
+        var discharges = Battery.DischargeCycles.ToList();
+        WriteSummary(discharges, discharges.FirstOrDefault()?.CapacityAh, discharges.LastOrDefault()?.CapacityAh);
+        BatteryChanged?.Invoke(this, EventArgs.Empty);
+        if (!ratedChanged)
+        {
+            return;
+        }
+
+        var generation = ++_ratedGeneration;
+        var ui = DispatcherQueue.GetForCurrentThread();
+        var battery = Battery;
+        Post(ui, () =>
+        {
+            IsBusy = true;
+            ErrorMessage = null;
+            Status = "Updating nameplate…";
+        });
+
+        try
+        {
+            var points = await Task.Run(() =>
+            {
+                lock (_gate)
+                {
+                    return Service.ForecastTrajectory(battery);
+                }
+            });
+            if (generation != _ratedGeneration)
+            {
+                return;
+            }
+
+            Post(ui, () =>
+            {
+                if (!ReferenceEquals(Battery, battery))
+                {
+                    return;
+                }
+
+                Trajectory = new TrajectorySnapshot { Battery = battery, Points = points };
+                RefreshForecast();
+                BatteryChanged?.Invoke(this, EventArgs.Empty);
+                CycleChanged?.Invoke(this, EventArgs.Empty);
+                Status = $"Nameplate set to {ampHours:0.00} Ah.";
+                IsBusy = false;
+            });
+        }
+        catch (Exception ex)
+        {
+            if (generation != _ratedGeneration)
+            {
+                return;
+            }
+
+            Post(ui, () =>
+            {
+                ErrorMessage = ex.Message;
+                Status = "Could not refresh the forecast for the new nameplate.";
+                IsBusy = false;
+            });
+        }
+    }
+
+    private void WriteSummary(IReadOnlyList<BatteryCycle> discharges, double? first, double? last)
+    {
+        if (Battery is null)
+        {
+            return;
+        }
+
+        var assumed = Battery.RatedCapacityAssumed ? " (assumed)" : "";
+        SummaryLine =
+            $"{discharges.Count} discharge cycles · rated {Battery.RatedCapacityAh:0.00} Ah{assumed} · " +
+            $"EOL {Battery.EolCapacityFraction:P0} ({Battery.EolCapacityAh:0.00} Ah) · " +
+            $"capacity {first:0.000} → {last:0.000} Ah";
     }
 
     private static void Post(DispatcherQueue? queue, Action action)

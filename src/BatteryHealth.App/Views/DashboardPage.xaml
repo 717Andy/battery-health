@@ -49,13 +49,17 @@
                 </Grid>
             </Border>
             <StackPanel Grid.Column="1" Spacing="12">
-                <TextBlock Text="Discharge cycle" FontWeight="SemiBold"/>
-                <Slider Minimum="{x:Bind ViewModel.CycleMin, Mode=OneWay}"
-                        Maximum="{x:Bind ViewModel.CycleMax, Mode=OneWay}"
-                        Value="{x:Bind ViewModel.CycleSlider, Mode=TwoWay}"
-                        ValueChanged="OnCycleChanged"/>
+                <TextBlock Text="Discharge cycles" FontWeight="SemiBold"/>
+                <ListView ItemsSource="{x:Bind ViewModel.DischargeRows, Mode=OneWay}"
+                          SelectedIndex="{x:Bind ViewModel.SelectedRowIndex, Mode=TwoWay}"
+                          DisplayMemberPath="Label"
+                          MaxHeight="280"/>
+                <NumberBox Header="Rated capacity (Ah)"
+                           Minimum="0.1" Maximum="20" SmallChange="0.1"
+                           SpinButtonPlacementMode="Inline"
+                           Value="{x:Bind ViewModel.RatedAh, Mode=TwoWay}"/>
                 <TextBlock TextWrapping="Wrap" Opacity="0.75"
-                           Text="Voltage, current, and temperature overlay for the selected cycle. NASA impedance spectra are skipped. Charge traces plot when the file includes them."/>
+                           Text="Each row is one discharge. The nameplate sets measured SoH and both end-of-life lines. The SoH model stays the NASA 2.0 Ah fit."/>
             </StackPanel>
         </Grid>
 

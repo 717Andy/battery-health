@@ -15,6 +15,7 @@ public class ParserTests
         Assert.Equal(3, record.DischargeCycles.Count());
         Assert.True(record.DischargeCycles.First().HasTrace);
         Assert.True(record.DischargeCycles.First().CapacityAh > 1.5);
+        Assert.False(record.RatedCapacityAssumed);
     }
 
     [Fact]
@@ -24,6 +25,7 @@ public class ParserTests
         Assert.Equal("calce", record.Source);
         Assert.Equal(2, record.DischargeCycles.Count());
         Assert.True(record.DischargeCycles.First().CapacityAh > 0);
+        Assert.True(record.RatedCapacityAssumed);
         Assert.NotNull(record.DischargeCycles.First().Features);
     }
 

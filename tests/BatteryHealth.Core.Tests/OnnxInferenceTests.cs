@@ -22,4 +22,18 @@ public class OnnxInferenceTests
             Assert.InRange(Math.Abs(result.PredictedSoh - observed), 0, 0.08);
         }
     }
+
+    [Fact]
+    public void NameplateChangesMeasuredSoh_AndLeavesTheNasaModelAlone()
+    {
+        using var predictor = new OnnxBatteryPredictor(ModelLocator.FindDirectory());
+        var battery = CanonicalJsonParser.ParseFile(Path.Combine(AppContext.BaseDirectory, "fixtures", "tiny_battery.json"));
+        var cycle = battery.DischargeCycles.First();
+        var trained = predictor.Predict(battery, cycle);
+        battery.RatedCapacityAh = 1.1;
+        var renamed = predictor.Predict(battery, cycle);
+        Assert.Equal(trained.PredictedSoh, renamed.PredictedSoh, 6);
+        Assert.Equal(trained.PredictedRulCycles, renamed.PredictedRulCycles, 4);
+        Assert.NotEqual(trained.ObservedSoh, renamed.ObservedSoh);
+    }
 }

@@ -17,6 +17,7 @@ public partial class SimulatorViewModel : ObservableObject
     [ObservableProperty] private string afText = "AF = 1.00";
     [ObservableProperty] private string rulCompare = "Load a battery to simulate thermal and load stress.";
     [ObservableProperty] private string physicsNote = DegradationSimulator.ScenarioClaim;
+    [ObservableProperty] private string emptyHint = "Load a cell log, or open the B0005 demo.";
     [ObservableProperty] private ISeries[] fadeSeries = [];
 
     public Axis[] CycleAxis { get; } = ChartFactory.CycleAxis();
@@ -25,6 +26,8 @@ public partial class SimulatorViewModel : ObservableObject
     public SimulatorViewModel(WorkspaceViewModel workspace)
     {
         Workspace = workspace;
+        ambientC = workspace.ScenarioAmbientC;
+        cRate = workspace.ScenarioCRate;
         workspace.BatteryChanged += (_, _) => Recalculate();
         workspace.CycleChanged += (_, _) => Recalculate();
     }
@@ -38,12 +41,16 @@ public partial class SimulatorViewModel : ObservableObject
 
     public void Recalculate()
     {
+        EmptyHint = Workspace.Battery is null ? "Load a cell log, or open the B0005 demo." : "";
         if (Workspace.Battery is null)
         {
             FadeSeries = [];
+            RulCompare = "Load a battery to simulate thermal and load stress.";
             return;
         }
 
+        Workspace.ScenarioAmbientC = AmbientC;
+        Workspace.ScenarioCRate = CRate;
         var sim = Workspace.Service.Simulate(Workspace.Battery, new StressScenario
         {
             AmbientTemperatureC = AmbientC,

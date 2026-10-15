@@ -15,4 +15,10 @@ public sealed partial class SimulatorPage : Page
     }
 
     private void OnReset(object sender, RoutedEventArgs e) => ViewModel.ResetReference();
+
+    private async void OnLoadDemo(object sender, RoutedEventArgs e)
+    {
+        await App.Workspace.LoadFromPath(WorkspaceViewModel.DemoPath);
+        ViewModel.Recalculate();
+    }
 }

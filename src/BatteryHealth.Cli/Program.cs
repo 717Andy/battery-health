@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using BatteryHealth.Core.Domain;
+using BatteryHealth.Core.Inference;
 using BatteryHealth.Core.Services;
 using BatteryHealth.Core.Simulation;
 
@@ -11,8 +12,9 @@ static int Usage()
 
         Commands:
           info <battery.json|calce.csv>
-          forecast <path> [--cycle N]
-          simulate <path> [--temp C] [--crate C] [--cycle N] [--eol 0.7|0.8]
+          forecast <path> [--cycle N] [--rated Ah]
+          simulate <path> [--temp C] [--crate C] [--cycle N] [--eol 0.7|0.8] [--rated Ah]
+          export <path> --out <report.csv|report.json> [--temp C] [--crate C] [--cycle N] [--rated Ah]
         """);
     return 2;
 }
@@ -36,6 +38,17 @@ if (args.Length < 2)
 var path = args[1];
 using var service = new BatteryAnalyticsService();
 var battery = service.Load(path);
+if (GetDouble(args, "--rated") is { } ratedAh)
+{
+    if (ratedAh <= 0)
+    {
+        Console.Error.WriteLine("Rated capacity must be positive.");
+        return 2;
+    }
+
+    battery.RatedCapacityAh = ratedAh;
+    battery.RatedCapacityAssumed = false;
+}
 
 switch (command)
 {
@@ -51,9 +64,17 @@ switch (command)
     case "forecast":
     {
         var cycle = GetInt(args, "--cycle");
-        var result = service.Forecast(battery, cycle);
-        Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
-        return 0;
+        try
+        {
+            var result = service.Forecast(battery, cycle);
+            Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+            return 0;
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return 2;
+        }
     }
 
     case "simulate":
@@ -73,8 +94,58 @@ switch (command)
         return 0;
     }
 
+    case "export":
+    {
+        var outPath = GetString(args, "--out");
+        if (string.IsNullOrWhiteSpace(outPath))
+        {
+            Console.Error.WriteLine("export requires --out <report.csv|report.json>.");
+            return 2;
+        }
+
+        var scenario = new StressScenario
+        {
+            AmbientTemperatureC = GetDouble(args, "--temp") ?? 24,
+            DischargeCRate = GetDouble(args, "--crate") ?? 1,
+            CurrentCycle = GetInt(args, "--cycle"),
+            EolCapacityFraction = GetDouble(args, "--eol"),
+        };
+        var trajectory = service.ForecastTrajectory(battery);
+        string? typical = null;
+        var modelDir = ModelLocator.FindDirectory();
+        var metricsPath = modelDir is null
+            ? null
+            : Path.GetFullPath(Path.Combine(modelDir, "..", "metrics.json"));
+        if (metricsPath is not null && File.Exists(metricsPath) &&
+            ProtocolError.TryRead(File.ReadAllText(metricsPath), out var rmse, out var n))
+        {
+            typical = ProtocolError.TypicalMiss(rmse, n);
+        }
+
+        var report = service.BuildDecision(battery, trajectory, scenario, typical);
+        DecisionReport.WritePair(outPath, report);
+        var csvPath = Path.ChangeExtension(outPath, ".csv");
+        var jsonPath = Path.ChangeExtension(outPath, ".json");
+        Console.WriteLine($"Wrote {csvPath}");
+        Console.WriteLine($"Wrote {jsonPath}");
+        return 0;
+    }
+
     default:
         return Usage();
+}
+
+static string? GetString(string[] argv, string name)
+{
+    for (var i = 0; i < argv.Length - 1; i++)
+    {
+        if (string.Equals(argv[i], name, StringComparison.OrdinalIgnoreCase))
+        {
+            return argv[i + 1];
+        }
+    }
+
+    return null;
 }
 
 static int? GetInt(string[] argv, string name)

@@ -27,6 +27,7 @@
             <TextBlock Text="{x:Bind ViewModel.CRate, Mode=OneWay}"/>
 
             <TextBlock Text="{x:Bind ViewModel.AfText, Mode=OneWay}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+            <TextBlock Text="{x:Bind ViewModel.EaBandText, Mode=OneWay}" TextWrapping="Wrap"/>
             <TextBlock Text="{x:Bind ViewModel.RulCompare, Mode=OneWay}" TextWrapping="Wrap"/>
             <Button Content="Reset to NASA 24 °C / 1C" Click="OnReset"/>
         </StackPanel>

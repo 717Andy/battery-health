@@ -15,7 +15,9 @@ public partial class ForecastViewModel : ObservableObject
 
     [ObservableProperty] private string sohText = "—";
     [ObservableProperty] private string rul70Text = "—";
+    [ObservableProperty] private string rul70FadeText = "—";
     [ObservableProperty] private string rul80Text = "—";
+    [ObservableProperty] private string featureShiftText = "";
     [ObservableProperty] private string observedText = "No measured capacity on this cycle.";
     [ObservableProperty] private string typicalErrorText =
         "Typical protocol error loads from artifacts/metrics.json.";
@@ -54,16 +56,23 @@ public partial class ForecastViewModel : ObservableObject
         {
             SohText = "—";
             Rul70Text = "—";
+            Rul70FadeText = "—";
             Rul80Text = "—";
+            FeatureShiftText = "";
             return;
         }
 
         SohText = $"{forecast.PredictedSohPercent:0.0}%";
         Rul70Text = $"{forecast.PredictedRulCycles:0} cycles";
+        var fade70 = Workspace.Battery is { } fadeBattery
+            ? FadeRul.EstimateCycles(fadeBattery, 0.70, forecast.CycleIndex)
+            : 0;
         var rul80 = Workspace.Battery is { } battery
             ? FadeRul.EstimateCycles(battery, 0.80, forecast.CycleIndex)
             : 0;
+        Rul70FadeText = $"{fade70:0} cycles on the fade curve";
         Rul80Text = $"{rul80:0} cycles";
+        FeatureShiftText = DescribeShift(forecast, Workspace.Trajectory?.Points);
         ObservedText = forecast.ObservedSoh is { } obs
             ? $"Measured SoH {obs * 100:0.0}% of the nameplate  ·  |error| vs model {Math.Abs(forecast.PredictedSoh - obs) * 100:0.2} points"
             : "No coulomb-counted capacity on this cycle — SoH is inferred from the V/I/T curve.";
@@ -112,7 +121,12 @@ public partial class ForecastViewModel : ObservableObject
             DischargeCRate = Workspace.ScenarioCRate,
             CurrentCycle = Workspace.SelectedCycle?.CycleIndex,
         };
-        var report = Workspace.Service.BuildDecision(Workspace.Battery, snapshot.Points, scenario, _typicalError);
+        var report = Workspace.Service.BuildDecision(
+            Workspace.Battery,
+            snapshot.Points,
+            scenario,
+            _typicalError,
+            Workspace.SelectedCycle?.CycleIndex);
         DecisionReport.WritePair(path, report);
         Workspace.Status = $"Wrote {Path.ChangeExtension(path, ".csv")} and {Path.ChangeExtension(path, ".json")}.";
         Workspace.ErrorMessage = null;
@@ -142,6 +156,24 @@ public partial class ForecastViewModel : ObservableObject
         }
 
         return string.Join(" ", warnings);
+    }
+
+    private static string DescribeShift(ForecastResult forecast, IReadOnlyList<ForecastResult>? trajectory)
+    {
+        if (trajectory is not { Count: > 0 })
+        {
+            return "";
+        }
+
+        var baseline = trajectory
+            .OrderBy(point => point.CycleIndex)
+            .FirstOrDefault(point => FeatureShift.Columns.All(point.Features.ContainsKey));
+        if (baseline is null || !FeatureShift.Columns.All(forecast.Features.ContainsKey))
+        {
+            return "";
+        }
+
+        return FeatureShift.Describe(forecast.CycleIndex, forecast.Features, baseline.CycleIndex, baseline.Features);
     }
 
     private void TryLoadMetrics()

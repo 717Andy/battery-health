@@ -32,10 +32,11 @@ public sealed class BatteryAnalyticsService : IDisposable
         BatteryRecord battery,
         IReadOnlyList<ForecastResult> trajectory,
         StressScenario scenario,
-        string? typicalProtocolError = null)
+        string? typicalProtocolError = null,
+        int? decisionCycle = null)
     {
         var stress = Simulate(battery, scenario);
-        return DecisionReport.Create(battery, trajectory, stress, typicalProtocolError);
+        return DecisionReport.Create(battery, trajectory, stress, typicalProtocolError, decisionCycle);
     }
 
     public IReadOnlyList<ForecastResult> ForecastTrajectory(BatteryRecord battery) =>

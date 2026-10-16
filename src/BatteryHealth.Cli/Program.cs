@@ -122,7 +122,17 @@ switch (command)
             typical = ProtocolError.TypicalMiss(rmse, n);
         }
 
-        var report = service.BuildDecision(battery, trajectory, scenario, typical);
+        DecisionReport report;
+        try
+        {
+            report = service.BuildDecision(battery, trajectory, scenario, typical, scenario.CurrentCycle);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return 2;
+        }
+
         DecisionReport.WritePair(outPath, report);
         var csvPath = Path.ChangeExtension(outPath, ".csv");
         var jsonPath = Path.ChangeExtension(outPath, ".json");

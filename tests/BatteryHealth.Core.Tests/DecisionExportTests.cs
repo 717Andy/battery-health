@@ -70,21 +70,77 @@ public class DecisionExportTests
             DischargeCRate = 2,
             CurrentCycle = 1,
         });
-        var report = DecisionReport.Create(battery, trajectory, stress, ProtocolError.TypicalMiss(12, 468));
+        var report = DecisionReport.Create(battery, trajectory, stress, ProtocolError.TypicalMiss(12, 468), decisionCycle: 1);
         var csv = report.ToCsv();
         Assert.Contains("rul_to_70_cycles", csv);
+        Assert.Contains("rul_to_70_fade_cycles", csv);
         Assert.Contains("rul_to_80_cycles", csv);
-        Assert.Contains("scenario_temperature_c", csv);
-        Assert.Contains("acceleration_factor", csv);
-        Assert.Contains("19", csv);
+        Assert.Contains("selected", csv);
+        Assert.Contains("acceleration_ea_0_30", csv);
+        Assert.Contains("acceleration_ea_0_70", csv);
 
         using var exported = JsonDocument.Parse(report.ToJson());
         var row = exported.RootElement.GetProperty("rows")[0];
         Assert.Equal(19, row.GetProperty("rulTo80Cycles").GetDouble());
         Assert.Equal(40, row.GetProperty("rulTo70Cycles").GetDouble());
-        Assert.Contains("empirical error", exported.RootElement.GetProperty("typicalProtocolError").GetString());
+        Assert.Equal(29, row.GetProperty("rulTo70FadeCycles").GetDouble());
+        Assert.True(row.GetProperty("selected").GetBoolean());
+        var decision = exported.RootElement.GetProperty("decision");
+        Assert.Equal(1, decision.GetProperty("cycle").GetInt32());
+        Assert.Equal(29, decision.GetProperty("fadeRulTo70Cycles").GetDouble());
+        Assert.Equal(19, decision.GetProperty("fadeRulTo80Cycles").GetDouble());
+        Assert.Contains("empirical error", decision.GetProperty("typicalProtocolError").GetString());
+        Assert.True(report.AccelerationAtEa070 > report.AccelerationAtEa050);
+        Assert.True(report.AccelerationAtEa050 > report.AccelerationAtEa030);
         Assert.Equal(45, report.ScenarioAmbientC);
         Assert.True(report.AccelerationFactor > 1);
+    }
+
+    [Fact]
+    public void OmittedDecisionCycle_SelectsTheLastTracedDischarge()
+    {
+        var battery = Sample();
+        battery.Cycles.Add(new BatteryCycle
+        {
+            CycleIndex = 40,
+            Type = "discharge",
+            CapacityAh = 1.2,
+            TimeS = [0, 10],
+            VoltageV = [4.0, 3.2],
+        });
+        var trajectory = new[]
+        {
+            new ForecastResult { BatteryId = "CELL", CycleIndex = 1, PredictedSoh = 0.95, PredictedRulCycles = 40 },
+            new ForecastResult { BatteryId = "CELL", CycleIndex = 40, PredictedSoh = 0.7, PredictedRulCycles = 5 },
+        };
+        var stress = DegradationSimulator.Simulate(battery, new StressScenario { AmbientTemperatureC = 24, DischargeCRate = 1 });
+        var report = DecisionReport.Create(battery, trajectory, stress);
+        Assert.Equal(40, report.DecisionCycle);
+        Assert.Equal(40, report.Decision!.Cycle);
+        Assert.False(report.Rows.First(row => row.CycleIndex == 1).Selected);
+        Assert.True(report.Rows.First(row => row.CycleIndex == 40).Selected);
+    }
+
+    [Fact]
+    public void FeatureShift_ComparesTheSelectedCycleWithTheFirst()
+    {
+        var baseline = new Dictionary<string, double>
+        {
+            ["energy_wh"] = 6,
+            ["duration_s"] = 3000,
+            ["time_to_3v0"] = 2500,
+        };
+        var current = new Dictionary<string, double>
+        {
+            ["energy_wh"] = 4.5,
+            ["duration_s"] = 2400,
+            ["time_to_3v0"] = 2000,
+        };
+        var text = FeatureShift.Describe(40, current, 1, baseline);
+        Assert.Contains("energy_wh -25.0%", text);
+        Assert.Contains("duration_s -20.0%", text);
+        Assert.Contains("time_to_3v0 -20.0%", text);
+        Assert.Contains("first scored discharge", FeatureShift.Describe(1, baseline, 1, baseline));
     }
 
     [Fact]

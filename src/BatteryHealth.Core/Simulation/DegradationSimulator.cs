@@ -43,7 +43,10 @@ public static class DegradationSimulator
     }
 
     public static double CombinedAcceleration(double ambientC, double cRate) =>
-        TemperatureAcceleration(ambientC) * CRateAcceleration(cRate);
+        ScenarioAcceleration(ambientC, cRate, ArrheniusEaEv);
+
+    public static double ScenarioAcceleration(double ambientC, double cRate, double eaEv) =>
+        TemperatureAcceleration(ambientC, eaEv: eaEv) * CRateAcceleration(cRate);
 
     public static StressSimulation Simulate(BatteryRecord battery, StressScenario scenario)
     {

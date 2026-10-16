@@ -31,3 +31,4 @@ jobs:
         run: |
           dotnet run --project src/BatteryHealth.Cli --configuration Release -- forecast tests/fixtures/tiny_battery.json --cycle 1
           dotnet run --project src/BatteryHealth.Cli --configuration Release -- simulate tests/fixtures/B0005.sample.json --temp 45 --crate 2 --cycle 40
+          dotnet run --project src/BatteryHealth.Cli --configuration Release -- export tests/fixtures/tiny_battery.json --out "$RUNNER_TEMP/battery-decision.csv" --temp 45 --crate 2

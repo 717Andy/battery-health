@@ -188,6 +188,7 @@ The WinUI app does **not** require this process. Use it to ingest raw `.mat` fil
 dotnet test tests\BatteryHealth.Core.Tests\BatteryHealth.Core.Tests.csproj
 dotnet run --project src\BatteryHealth.Cli -- forecast tests\fixtures\tiny_battery.json --cycle 1
 dotnet run --project src\BatteryHealth.Cli -- simulate tests\fixtures\B0005.sample.json --temp 45 --crate 2 --cycle 40
+dotnet run --project src\BatteryHealth.Cli -- export tests\fixtures\tiny_battery.json --out battery-decision.csv --temp 45 --crate 2
 ```
 
 ### 4. Build and run the WinUI app (Windows only)
@@ -206,9 +207,9 @@ dotnet run --project src\BatteryHealth.App\BatteryHealth.App.csproj -p:Platform=
 
 In the app:
 
-1. **Lifecycle dashboard** — *Load B0005 demo* or open `data/processed/B0005.json` / a CALCE file. Scrub cycles to plot V/I/T. The lower chart is capacity fade.
-2. **RUL forecast** — SoH %, cycles to EOL, predicted vs measured SoH. Toggle 80% OEM.
-3. **Stress simulator** — sliders for ambient °C and C-rate; overlay stressed fade and the new RUL.
+1. **Lifecycle dashboard** — *Load B0005 demo* or open `data/processed/B0005.json` / a CALCE file. Pick a discharge from the list (the row is that cycle index, not the nearest earlier one). Set the nameplate if the file did not carry one. The lower chart is capacity fade.
+2. **RUL forecast** — predicted SoH, ONNX cycles to the NASA 70% line, and fade-curve cycles to 80% of the nameplate, plus the typical miss on an unseen cell from this protocol. Export writes that trajectory and the current stress scenario as CSV and JSON.
+3. **Stress simulator** — sliders for ambient °C and C-rate; overlay stressed fade and the new RUL. The forecast export uses the scenario last set here.
 
 The demo JSON keeps fade for every B0005 discharge and full traces on cycles 1, 40, 80, 120, and the last cycle (to keep the file small). Processed JSON from the download script has traces for every charge and discharge.
 

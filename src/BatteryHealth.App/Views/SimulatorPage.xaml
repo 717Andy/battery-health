@@ -12,6 +12,8 @@
 
         <StackPanel Spacing="16">
             <TextBlock Text="Thermal &amp; load stress" Style="{StaticResource TitleTextBlockStyle}" TextWrapping="Wrap"/>
+            <TextBlock Text="{x:Bind ViewModel.EmptyHint, Mode=OneWay}" TextWrapping="Wrap" Opacity="0.75"/>
+            <Button Content="Load B0005 demo" Click="OnLoadDemo"/>
             <TextBlock Text="{x:Bind ViewModel.PhysicsNote, Mode=OneWay}" TextWrapping="Wrap" Opacity="0.75"/>
 
             <TextBlock Text="Ambient temperature (°C)" FontWeight="SemiBold"/>

@@ -21,20 +21,40 @@ public static class CanonicalJsonParser
 
     public static BatteryRecord Parse(Stream stream)
     {
-        var record = JsonSerializer.Deserialize<BatteryRecord>(stream, Options)
+        using var doc = JsonDocument.Parse(stream);
+        return FromDocument(doc);
+    }
+
+    public static BatteryRecord Parse(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        return FromDocument(doc);
+    }
+
+    private static BatteryRecord FromDocument(JsonDocument doc)
+    {
+        var root = doc.RootElement;
+        var record = JsonSerializer.Deserialize<BatteryRecord>(root.GetRawText(), Options)
                      ?? throw new InvalidDataException("Battery JSON deserialized to null");
         if (string.IsNullOrWhiteSpace(record.BatteryId))
         {
             throw new InvalidDataException("Battery JSON is missing batteryId");
         }
 
+        record.RatedCapacityAssumed = !HasProperty(root, "ratedCapacityAh");
         return record;
     }
 
-    public static BatteryRecord Parse(string json)
+    private static bool HasProperty(JsonElement root, string name)
     {
-        var record = JsonSerializer.Deserialize<BatteryRecord>(json, Options)
-                     ?? throw new InvalidDataException("Battery JSON deserialized to null");
-        return record;
+        foreach (var property in root.EnumerateObject())
+        {
+            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

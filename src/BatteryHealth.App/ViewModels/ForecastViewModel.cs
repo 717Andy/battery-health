@@ -1,6 +1,7 @@
 using System.Text.Json;
 using BatteryHealth.App.Charts;
 using BatteryHealth.Core.Domain;
+using BatteryHealth.Core.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LiveChartsCore;
@@ -13,15 +14,20 @@ public partial class ForecastViewModel : ObservableObject
     public WorkspaceViewModel Workspace { get; }
 
     [ObservableProperty] private string sohText = "—";
-    [ObservableProperty] private string rulText = "—";
+    [ObservableProperty] private string rul70Text = "—";
+    [ObservableProperty] private string rul80Text = "—";
     [ObservableProperty] private string observedText = "No measured capacity on this cycle.";
-    [ObservableProperty] private string eolText =
-        "RUL is cycles until 70% of rated capacity (NASA PCoE official: 2.0 Ah → 1.4 Ah). " +
-        "80% is the common EV warranty / replacement threshold.";
+    [ObservableProperty] private string typicalErrorText =
+        "Typical protocol error loads from artifacts/metrics.json.";
+    [ObservableProperty] private string applicabilityText = ProtocolError.Applicability;
+    [ObservableProperty] private string warningText = "";
+    [ObservableProperty] private string emptyHint = "Load a cell log, or open the B0005 demo.";
     [ObservableProperty] private string metricsText = "Train the Python pipeline to populate artifacts/metrics.json.";
-    [ObservableProperty] private bool useOemThreshold;
+    [ObservableProperty] private bool hasBattery;
     [ObservableProperty] private ISeries[] sohSeries = [];
     [ObservableProperty] private string headline = "Run a forecast on the loaded cell.";
+
+    private string? _typicalError;
 
     public Axis[] CycleAxis { get; } = ChartFactory.CycleAxis();
     public Axis[] SohAxis { get; } = ChartFactory.SohAxis();
@@ -32,37 +38,37 @@ public partial class ForecastViewModel : ObservableObject
         workspace.BatteryChanged += (_, _) => Refresh();
         workspace.CycleChanged += (_, _) => Refresh();
         TryLoadMetrics();
+        TypicalErrorText = _typicalError ?? TypicalErrorText;
     }
 
     [RelayCommand]
     public void Refresh()
     {
         Workspace.RefreshForecast();
+        HasBattery = Workspace.Battery is not null;
+        EmptyHint = HasBattery ? "" : "Load a cell log, or open the B0005 demo.";
+        ApplicabilityText = ProtocolError.Applicability;
+        WarningText = DescribeWarnings(Workspace.Battery, Workspace.SelectedCycle);
         var forecast = Workspace.Forecast;
         if (forecast is null)
         {
             SohText = "—";
-            RulText = "—";
+            Rul70Text = "—";
+            Rul80Text = "—";
             return;
         }
 
         SohText = $"{forecast.PredictedSohPercent:0.0}%";
-        var rul = forecast.PredictedRulCycles;
-        if (UseOemThreshold && Workspace.Battery is { } battery)
-        {
-            rul = EstimateRulFromFade(battery, 0.80, forecast.CycleIndex);
-            EolText = "Showing fade-curve RUL to 80% of rated capacity (OEM warranty line). The ONNX model itself is trained to the NASA 70% stop.";
-        }
-        else
-        {
-            EolText = "ONNX RUL to 70% of rated capacity (NASA PCoE official end-of-life). Toggle OEM to estimate 80% from the measured fade curve.";
-        }
-
-        RulText = $"{rul:0} cycles";
+        Rul70Text = $"{forecast.PredictedRulCycles:0} cycles";
+        var rul80 = Workspace.Battery is { } battery
+            ? FadeRul.EstimateCycles(battery, 0.80, forecast.CycleIndex)
+            : 0;
+        Rul80Text = $"{rul80:0} cycles";
         ObservedText = forecast.ObservedSoh is { } obs
-            ? $"Measured SoH {obs * 100:0.0}%  ·  |error| {Math.Abs(forecast.PredictedSoh - obs) * 100:0.2} points"
+            ? $"Measured SoH {obs * 100:0.0}% of the nameplate  ·  |error| vs model {Math.Abs(forecast.PredictedSoh - obs) * 100:0.2} points"
             : "No coulomb-counted capacity on this cycle — SoH is inferred from the V/I/T curve.";
         Headline = $"{forecast.BatteryId} cycle {forecast.CycleIndex}";
+        TypicalErrorText = _typicalError ?? "Typical protocol error is unavailable until artifacts/metrics.json is loaded.";
 
         if (Workspace.Battery is { } rec)
         {
@@ -92,36 +98,50 @@ public partial class ForecastViewModel : ObservableObject
         }
     }
 
-    partial void OnUseOemThresholdChanged(bool value) => Refresh();
-
-    private static double EstimateRulFromFade(BatteryRecord battery, double fraction, int currentCycle)
+    public void ExportTo(string path)
     {
-        var threshold = battery.RatedCapacityAh * fraction;
-        var points = battery.DischargeCycles.Where(c => c.CapacityAh.HasValue).ToList();
-        foreach (var c in points)
+        if (Workspace.Battery is null || Workspace.Trajectory is not { Points.Count: > 0, Error: null } snapshot)
         {
-            if (c.CycleIndex >= currentCycle && c.CapacityAh <= threshold)
-            {
-                return Math.Max(0, c.CycleIndex - currentCycle);
-            }
+            Workspace.ErrorMessage = "Load a cell before exporting.";
+            return;
         }
 
-        if (points.Count < 2)
+        var scenario = new StressScenario
         {
-            return 0;
+            AmbientTemperatureC = Workspace.ScenarioAmbientC,
+            DischargeCRate = Workspace.ScenarioCRate,
+            CurrentCycle = Workspace.SelectedCycle?.CycleIndex,
+        };
+        var report = Workspace.Service.BuildDecision(Workspace.Battery, snapshot.Points, scenario, _typicalError);
+        DecisionReport.WritePair(path, report);
+        Workspace.Status = $"Wrote {Path.ChangeExtension(path, ".csv")} and {Path.ChangeExtension(path, ".json")}.";
+        Workspace.ErrorMessage = null;
+    }
+
+    private static string DescribeWarnings(BatteryRecord? battery, BatteryCycle? cycle)
+    {
+        if (battery is null)
+        {
+            return "";
         }
 
-        var last = points[^1];
-        var first = points.First(c => c.CycleIndex >= currentCycle);
-        var dn = last.CycleIndex - first.CycleIndex;
-        var dc = first.CapacityAh!.Value - last.CapacityAh!.Value;
-        if (dn <= 0 || dc <= 1e-9)
+        var warnings = new List<string>();
+        if (cycle is not null && !cycle.HasTrace && cycle.Features is not { Count: > 0 })
         {
-            return 0;
+            warnings.Add("This cycle has no sensor trace and no features, so it cannot be scored.");
         }
 
-        var extra = Math.Max(0, (last.CapacityAh.Value - threshold) / (dc / dn));
-        return Math.Max(0, last.CycleIndex + extra - currentCycle);
+        if (battery.RatedCapacityAssumed)
+        {
+            warnings.Add("Rated capacity was not in the file. The nameplate stays assumed until you set it. Measured SoH and both end-of-life lines follow that nameplate.");
+        }
+
+        if (Math.Abs(battery.RatedCapacityAh - BatteryRecord.TrainingRatedCapacityAh) > 1e-6)
+        {
+            warnings.Add($"{ProtocolError.ModelFitNote} Measured SoH and the end-of-life lines use {battery.RatedCapacityAh:0.00} Ah.");
+        }
+
+        return string.Join(" ", warnings);
     }
 
     private void TryLoadMetrics()
@@ -137,8 +157,15 @@ public partial class ForecastViewModel : ObservableObject
                 continue;
             }
 
-            using var doc = JsonDocument.Parse(File.ReadAllText(candidate));
+            var json = File.ReadAllText(candidate);
+            using var doc = JsonDocument.Parse(json);
             MetricsText = DescribeMetrics(doc.RootElement);
+            if (ProtocolError.TryRead(json, out var rmse, out var n))
+            {
+                _typicalError = ProtocolError.TypicalMiss(rmse, n);
+                TypicalErrorText = _typicalError;
+            }
+
             return;
         }
     }

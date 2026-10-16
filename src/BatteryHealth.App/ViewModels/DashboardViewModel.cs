@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using BatteryHealth.App.Charts;
 using BatteryHealth.Core.Domain;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,9 +15,12 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty] private ISeries[] fadeSeries = [];
     [ObservableProperty] private string cycleCaption = "Select a discharge cycle with a sensor trace.";
     [ObservableProperty] private string emptyHint = "Open a processed NASA JSON (data/processed/B0005.json) or the bundled B0005 demo.";
-    [ObservableProperty] private double cycleSlider = 1;
-    [ObservableProperty] private double cycleMin = 1;
-    [ObservableProperty] private double cycleMax = 1;
+    [ObservableProperty] private double ratedAh = 2;
+    [ObservableProperty] private int selectedRowIndex = -1;
+
+    public ObservableCollection<DischargeChoice> DischargeRows { get; } = [];
+
+    private bool _syncing;
 
     public Axis[] TimeAxis { get; } = ChartFactory.TimeAxis();
     public Axis[] SensorYAxis { get; } = ChartFactory.SensorYAxis();
@@ -33,30 +37,71 @@ public partial class DashboardViewModel : ObservableObject
     public void Refresh()
     {
         var battery = Workspace.Battery;
+        _syncing = true;
+        DischargeRows.Clear();
         if (battery is null)
         {
+            SelectedRowIndex = -1;
+            _syncing = false;
             SensorSeries = [];
             FadeSeries = [];
             return;
         }
 
         var discharges = battery.DischargeCycles.ToList();
-        CycleMin = discharges.FirstOrDefault()?.CycleIndex ?? 1;
-        CycleMax = discharges.LastOrDefault()?.CycleIndex ?? 1;
-        if (Workspace.SelectedCycle is { } selected)
+        foreach (var cycle in discharges)
         {
-            CycleSlider = selected.CycleIndex;
-            CycleCaption = selected.HasTrace
-                ? $"Cycle {selected.CycleIndex} · {selected.Type} · {(selected.CapacityAh is { } c ? $"{c:0.000} Ah" : "no capacity")}"
-                : $"Cycle {selected.CycleIndex} has fade data only. Pick a traced cycle (demo: 1, 40, 80, 120, last).";
+            var capacity = cycle.CapacityAh is { } value ? $"{value:0.000} Ah" : "no capacity";
+            var trace = cycle.HasTrace ? "trace" : "fade only";
+            DischargeRows.Add(new DischargeChoice
+            {
+                CycleIndex = cycle.CycleIndex,
+                Label = $"Cycle {cycle.CycleIndex} · {capacity} · {trace}",
+            });
+        }
+
+        RatedAh = battery.RatedCapacityAh;
+        SelectedRowIndex = Workspace.SelectedCycle is { } selected
+            ? discharges.FindIndex(c => c.CycleIndex == selected.CycleIndex)
+            : -1;
+        _syncing = false;
+
+        if (Workspace.SelectedCycle is { } current)
+        {
+            CycleCaption = current.HasTrace
+                ? $"Cycle {current.CycleIndex} · {current.Type} · {(current.CapacityAh is { } c ? $"{c:0.000} Ah" : "no capacity")}"
+                : $"Cycle {current.CycleIndex} has fade data only.";
         }
 
         SensorSeries = ChartFactory.SensorSeries(Workspace.SelectedCycle);
         FadeSeries = ChartFactory.FadeSeries(battery);
     }
 
-    public void OnCycleSlider(int value)
+    partial void OnSelectedRowIndexChanged(int value)
     {
-        Workspace.SelectCycle(value);
+        if (_syncing || value < 0 || value >= DischargeRows.Count)
+        {
+            return;
+        }
+
+        Workspace.SelectCycle(DischargeRows[value].CycleIndex);
     }
+
+    partial void OnRatedAhChanged(double value)
+    {
+        if (_syncing || Workspace.Battery is null || value <= 0)
+        {
+            return;
+        }
+
+        _ = Workspace.SetRatedCapacityAsync(value);
+    }
+}
+
+public sealed class DischargeChoice
+{
+    public int CycleIndex { get; init; }
+    public string Label { get; init; } = "";
+
+    public override string ToString() => Label;
 }

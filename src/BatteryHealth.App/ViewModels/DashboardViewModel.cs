@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using BatteryHealth.App.Charts;
 using BatteryHealth.Core.Domain;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.UI.Xaml;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 
@@ -14,7 +15,9 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty] private ISeries[] sensorSeries = [];
     [ObservableProperty] private ISeries[] fadeSeries = [];
     [ObservableProperty] private string cycleCaption = "Select a discharge cycle with a sensor trace.";
-    [ObservableProperty] private string emptyHint = "Open a processed NASA JSON (data/processed/B0005.json) or the bundled B0005 demo.";
+    [ObservableProperty] private string emptyHint = IntakeReport.StartingHint;
+    [ObservableProperty] private string intakeText = "";
+    [ObservableProperty] private Visibility intakeVisibility = Visibility.Collapsed;
     [ObservableProperty] private double ratedAh = 2;
     [ObservableProperty] private int selectedRowIndex = -1;
 
@@ -42,11 +45,19 @@ public partial class DashboardViewModel : ObservableObject
         if (battery is null)
         {
             SelectedRowIndex = -1;
+            IntakeText = "";
+            IntakeVisibility = Visibility.Collapsed;
+            EmptyHint = IntakeReport.StartingHint;
             _syncing = false;
             SensorSeries = [];
             FadeSeries = [];
             return;
         }
+
+        var intake = IntakeReport.From(battery);
+        IntakeText = string.Join(Environment.NewLine, intake.Lines);
+        IntakeVisibility = Visibility.Visible;
+        EmptyHint = "";
 
         var discharges = battery.DischargeCycles.ToList();
         foreach (var cycle in discharges)

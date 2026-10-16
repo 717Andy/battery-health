@@ -8,6 +8,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
@@ -28,7 +29,13 @@
                        Opacity="0.75"/>
         </StackPanel>
 
-        <Grid Grid.Row="2" ColumnSpacing="16">
+        <Border Grid.Row="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8" Padding="16"
+                Visibility="{x:Bind ViewModel.IntakeVisibility, Mode=OneWay}">
+            <TextBlock Text="{x:Bind ViewModel.IntakeText, Mode=OneWay}" TextWrapping="Wrap"/>
+        </Border>
+
+        <Grid Grid.Row="3" ColumnSpacing="16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*"/>
                 <ColumnDefinition Width="*"/>
@@ -63,7 +70,7 @@
             </StackPanel>
         </Grid>
 
-        <Border Grid.Row="3" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+        <Border Grid.Row="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 CornerRadius="8" Padding="12">
             <Grid>
                 <Grid.RowDefinitions>

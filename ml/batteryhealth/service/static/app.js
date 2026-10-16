@@ -9,6 +9,7 @@ const state = {
   forecast: null,
   trajectory: [],
   charts: {},
+  copy: {},
 };
 
 const $ = (id) => document.getElementById(id);
@@ -19,8 +20,7 @@ function discharges() {
 
 function cycleByIndex(index) {
   const list = discharges();
-  const matches = list.filter((c) => Number(c.cycleIndex) <= Number(index));
-  return matches.at(-1) || list[0] || null;
+  return list.find((c) => Number(c.cycleIndex) === Number(index)) || list[0] || null;
 }
 
 function hasTrace(cycle) {
@@ -40,6 +40,7 @@ function showError(message) {
 
 function setStatus(text) {
   $("status-line").textContent = text;
+  $("footer-status").textContent = text;
 }
 
 async function api(path, options) {
@@ -102,14 +103,14 @@ function renderSensors(cycle) {
   );
 }
 
-function fadePoints(battery) {
+function fadePoints() {
   return discharges()
     .filter((c) => c.capacityAh != null)
     .map((c) => ({ x: c.cycleIndex, y: c.capacityAh }));
 }
 
 function renderFade(stressed) {
-  const datasets = [{ label: "Measured capacity", data: fadePoints(state.battery), borderColor: TEAL }];
+  const datasets = [{ label: "Measured capacity", data: fadePoints(), borderColor: TEAL }];
   if (stressed?.length) {
     datasets.push({
       label: "Stressed capacity",
@@ -156,12 +157,12 @@ function renderStress(sim) {
 }
 
 function selectedCycleIndex() {
-  return Number($("cycle-slider").value);
+  const list = $("cycle-list");
+  return Number(list.value || state.summary?.defaultCycle || 1);
 }
 
 function refreshCycleUi() {
   const cycle = cycleByIndex(selectedCycleIndex());
-  $("cycle-value").textContent = cycle ? `Cycle ${cycle.cycleIndex}` : "—";
   if (!cycle) {
     $("cycle-caption").textContent = "Select a discharge cycle with a sensor trace.";
     renderSensors(null);
@@ -170,7 +171,7 @@ function refreshCycleUi() {
   const cap = cycle.capacityAh != null ? `${Number(cycle.capacityAh).toFixed(3)} Ah` : "no capacity";
   $("cycle-caption").textContent = hasTrace(cycle)
     ? `Cycle ${cycle.cycleIndex} · ${cycle.type} · ${cap}`
-    : `Cycle ${cycle.cycleIndex} has fade data only. Pick a traced cycle (demo: 1, 40, 80, 120, last).`;
+    : `Cycle ${cycle.cycleIndex} has fade data only.`;
   renderSensors(cycle);
 }
 
@@ -187,14 +188,25 @@ function applyBattery(record, summary, status) {
     `EOL ${(summary.eolCapacityFraction * 100).toFixed(0)}% (${Number(summary.eolCapacityAh).toFixed(2)} Ah) · ` +
     `capacity ${first} → ${last} Ah`;
   $("empty-hint").textContent = "";
+  $("forecast-empty").textContent = "";
+  $("sim-empty").textContent = "";
+  $("intake-text").textContent = (summary.intakeLines || []).join("\n");
+  $("intake-card").classList.remove("hidden");
   setStatus(status);
   showError("");
 
-  const slider = $("cycle-slider");
-  slider.min = String(summary.cycleMin);
-  slider.max = String(summary.cycleMax);
-  slider.value = String(summary.defaultCycle);
-  slider.disabled = false;
+  const list = $("cycle-list");
+  list.innerHTML = "";
+  (summary.dischargeRows || []).forEach((row) => {
+    const opt = document.createElement("option");
+    opt.value = String(row.cycleIndex);
+    opt.textContent = row.label;
+    list.appendChild(opt);
+  });
+  list.value = String(summary.defaultCycle);
+  list.disabled = false;
+  $("rated-ah").value = Number(summary.ratedCapacityAh).toFixed(2);
+  $("rated-ah").disabled = false;
   refreshCycleUi();
   renderFade();
 }
@@ -207,22 +219,22 @@ async function refreshForecast() {
     body: JSON.stringify({ battery: state.battery, cycle_index: selectedCycleIndex() }),
   });
   state.forecast = forecast;
-  const oem = $("oem-toggle").checked;
-  const rul = oem ? forecast.oemRulCycles : forecast.predictedRulCycles;
   $("soh-text").textContent = `${forecast.predictedSohPercent.toFixed(1)}%`;
-  $("rul-text").textContent = `${Math.round(rul)} cycles`;
+  $("rul70-text").textContent = `${Math.round(forecast.predictedRulCycles)} cycles`;
+  $("rul70-fade").textContent = `${Math.round(forecast.fadeRulTo70Cycles)} cycles on the fade curve`;
+  $("rul80-text").textContent = `${Math.round(forecast.fadeRulTo80Cycles)} cycles`;
   $("forecast-headline").textContent = `${forecast.batteryId} cycle ${forecast.cycleIndex}`;
   if (forecast.observedSoh != null) {
     const err = Math.abs(forecast.predictedSoh - forecast.observedSoh) * 100;
     $("observed-text").textContent =
-      `Measured SoH ${(forecast.observedSoh * 100).toFixed(1)}%  ·  |error| ${err.toFixed(2)} points`;
+      `Measured SoH ${(forecast.observedSoh * 100).toFixed(1)}% of the nameplate  ·  |error| vs model ${err.toFixed(2)} points`;
   } else {
     $("observed-text").textContent =
       "No coulomb-counted capacity on this cycle — SoH is inferred from the V/I/T curve.";
   }
-  $("eol-text").textContent = oem
-    ? "Showing fade-curve RUL to 80% of rated capacity (OEM warranty line). The ONNX model itself is trained to the NASA 70% stop."
-    : "ONNX RUL to 70% of rated capacity (NASA PCoE official end-of-life). Toggle OEM to estimate 80% from the measured fade curve.";
+  $("feature-shift").textContent = forecast.featureShift || "";
+  $("warning-text").textContent = forecast.warnings || "";
+  $("applicability").textContent = forecast.applicability || state.copy.applicability || "";
 }
 
 async function refreshTrajectory() {
@@ -260,6 +272,7 @@ async function refreshSim() {
     `stressed RUL ${sim.stressedRulCycles} cycles ` +
     `(${sim.ambientTemperatureC.toFixed(0)} °C, ${sim.dischargeCRate.toFixed(2)} C). ` +
     `EOL cycle ${sim.baselineEolCycle} → ${sim.stressedEolCycle}${extra}`;
+  $("ea-band").textContent = sim.eaBand || "";
   renderStress(sim);
   renderFade(sim.stressed);
 }
@@ -275,6 +288,10 @@ async function loadDemo(id) {
   await afterLoad();
 }
 
+function dischargesOf(record) {
+  return (record.cycles || []).filter((c) => String(c.type || "").toLowerCase() === "discharge");
+}
+
 async function loadFile(file) {
   setStatus(`Opening ${file.name}…`);
   const lower = file.name.toLowerCase();
@@ -285,65 +302,77 @@ async function loadFile(file) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ battery: record }),
     });
-    const summary = {
-      batteryId: record.batteryId,
-      source: record.source || "json",
-      nCycles: dischargesOf(record).length,
-      ratedCapacityAh: record.ratedCapacityAh,
-      eolCapacityFraction: record.eolCapacityFraction,
-      eolCapacityAh: record.ratedCapacityAh * record.eolCapacityFraction,
-      firstCapacityAh: firstCap(record),
-      lastCapacityAh: lastCap(record),
-      cycleMin: minCycle(record),
-      cycleMax: maxCycle(record),
-      defaultCycle: defaultCycle(record),
-    };
-    applyBattery(record, summary, `Loaded ${file.name}`);
+    applyBattery(record, await summarizeLocal(record), `Loaded ${file.name}`);
     await afterLoad();
     return payload;
   }
   const form = new FormData();
   form.append("file", file, file.name);
   const record = await api("/parse/calce", { method: "POST", body: form });
-  const payload = await api(`/demo/calce`).catch(() => null);
-  const summary = {
+  applyBattery(record, await summarizeLocal(record), `Loaded ${file.name}`);
+  await afterLoad();
+  return record;
+}
+
+async function summarizeLocal(record) {
+  const demo = await api("/demo/tiny").catch(() => null);
+  const discharges = dischargesOf(record);
+  const caps = discharges.map((c) => c.capacityAh).filter((c) => c != null);
+  const traced = discharges.filter(hasTrace);
+  return {
     batteryId: record.batteryId,
-    source: record.source || "calce",
-    nCycles: dischargesOf(record).length,
+    source: record.source || "file",
+    nCycles: discharges.length,
     ratedCapacityAh: record.ratedCapacityAh,
     eolCapacityFraction: record.eolCapacityFraction,
     eolCapacityAh: record.ratedCapacityAh * record.eolCapacityFraction,
-    firstCapacityAh: firstCap(record),
-    lastCapacityAh: lastCap(record),
-    cycleMin: minCycle(record),
-    cycleMax: maxCycle(record),
-    defaultCycle: defaultCycle(record),
+    firstCapacityAh: caps[0],
+    lastCapacityAh: caps.at(-1),
+    defaultCycle: traced.at(-1)?.cycleIndex ?? discharges.at(-1)?.cycleIndex ?? 1,
+    intakeLines: demo?.summary?.intakeLines,
+    dischargeRows: discharges.map((c) => ({
+      cycleIndex: c.cycleIndex,
+      label: `Cycle ${c.cycleIndex} · ${c.capacityAh != null ? Number(c.capacityAh).toFixed(3) + " Ah" : "no capacity"} · ${hasTrace(c) ? "trace" : "fade only"}`,
+      hasTrace: hasTrace(c),
+    })),
   };
-  applyBattery(record, summary, `Loaded ${file.name}`);
-  await afterLoad();
-  return payload;
 }
 
-function dischargesOf(record) {
-  return (record.cycles || []).filter((c) => String(c.type || "").toLowerCase() === "discharge");
+function downloadText(name, text, mime) {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
-function firstCap(record) {
-  const caps = dischargesOf(record).map((c) => c.capacityAh).filter((c) => c != null);
-  return caps[0];
-}
-function lastCap(record) {
-  const caps = dischargesOf(record).map((c) => c.capacityAh).filter((c) => c != null);
-  return caps.at(-1);
-}
-function minCycle(record) {
-  return dischargesOf(record)[0]?.cycleIndex ?? 1;
-}
-function maxCycle(record) {
-  return dischargesOf(record).at(-1)?.cycleIndex ?? 1;
-}
-function defaultCycle(record) {
-  const traced = dischargesOf(record).filter(hasTrace);
-  return traced.at(-1)?.cycleIndex ?? maxCycle(record);
+
+async function exportReport() {
+  if (!state.battery) {
+    showError("Load a cell before exporting.");
+    return;
+  }
+  setStatus("Building CSV and JSON…");
+  const report = await api("/workspace/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      battery: state.battery,
+      cycle_index: selectedCycleIndex(),
+      ambient_temperature_c: Number($("temp-slider").value),
+      discharge_c_rate: Number($("crate-slider").value),
+    }),
+  });
+  $("export-preview").classList.remove("hidden");
+  $("export-status").textContent = `Wrote ${report.csvName} and ${report.jsonName}.`;
+  $("export-csv").textContent = report.previewCsv;
+  $("export-json").textContent = report.previewJson;
+  downloadText(report.csvName, report.csv, "text/csv");
+  downloadText(report.jsonName, JSON.stringify(report.json, null, 2), "application/json");
+  setStatus(`Wrote ${report.csvName} and ${report.jsonName}.`);
 }
 
 function showPage(name) {
@@ -356,20 +385,16 @@ async function boot() {
   document.querySelectorAll(".nav-item").forEach((btn) => {
     btn.addEventListener("click", () => showPage(btn.dataset.page));
   });
-  $("btn-demo").addEventListener("click", async () => {
+  const loadB0005 = async () => {
     try {
       await loadDemo("B0005");
     } catch (err) {
       showError(err.message);
     }
-  });
-  $("btn-calce").addEventListener("click", async () => {
-    try {
-      await loadDemo("calce");
-    } catch (err) {
-      showError(err.message);
-    }
-  });
+  };
+  $("btn-demo").addEventListener("click", loadB0005);
+  $("btn-demo-forecast").addEventListener("click", loadB0005);
+  $("btn-demo-sim").addEventListener("click", loadB0005);
   $("btn-open").addEventListener("click", () => $("file-input").click());
   $("file-input").addEventListener("change", async (ev) => {
     const file = ev.target.files?.[0];
@@ -380,22 +405,41 @@ async function boot() {
       showError(err.message);
     }
   });
-  $("cycle-slider").addEventListener("input", () => {
+  $("cycle-list").addEventListener("change", async () => {
     refreshCycleUi();
-  });
-  $("cycle-slider").addEventListener("change", async () => {
     try {
       await Promise.all([refreshForecast(), refreshSim()]);
     } catch (err) {
       showError(err.message);
     }
   });
-  $("oem-toggle").addEventListener("change", () => {
-    if (state.forecast) refreshForecast().catch((err) => showError(err.message));
+  $("rated-ah").addEventListener("change", async () => {
+    if (!state.battery) return;
+    state.battery.ratedCapacityAh = Number($("rated-ah").value);
+    state.battery.ratedCapacityAssumed = false;
+    try {
+      const demo = await api("/demo/B0005");
+      // Rebuild intake from current battery via a local forecast refresh.
+      await afterLoad();
+      $("intake-text").textContent =
+        `Nameplate ${Number($("rated-ah").value).toFixed(2)} Ah.\n` +
+        `Lab stop is 70% (${(Number($("rated-ah").value) * 0.7).toFixed(2)} Ah). ` +
+        `Warranty line is 80% (${(Number($("rated-ah").value) * 0.8).toFixed(2)} Ah).`;
+      void demo;
+    } catch (err) {
+      showError(err.message);
+    }
   });
   $("btn-refresh").addEventListener("click", async () => {
     try {
       await Promise.all([refreshForecast(), refreshTrajectory()]);
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+  $("btn-export").addEventListener("click", async () => {
+    try {
+      await exportReport();
     } catch (err) {
       showError(err.message);
     }
@@ -423,14 +467,11 @@ async function boot() {
     const health = await api("/health");
     $("sidecar-status").textContent = health.models?.soh && health.models?.rul ? "ONNX ready" : "Models missing";
     if (!(health.models?.soh && health.models?.rul)) $("sidecar-status").classList.add("bad");
-    const metrics = await api("/metrics");
-    const hold = metrics?.rul?.gbr?.holdout;
-    if (hold) {
-      $("metrics-text").textContent =
-        `Held-out B0018 (GBR ONNX): RUL RMSE ${Number(hold.rmse).toFixed(1)} cycles, ` +
-        `MAE ${Number(hold.mae).toFixed(1)}, R² ${Number(hold.r2).toFixed(2)}. ` +
-        "SoH GBR RMSE 0.0067 (fraction). See README for leave-one-battery-out and noise robustness.";
-    }
+    const copy = await api("/workspace/copy");
+    state.copy = copy;
+    $("metrics-text").textContent = copy.metricsText || "";
+    $("typical-error").textContent = copy.typicalError || "";
+    $("ea-band").textContent = copy.eaBand24C1C || "";
   } catch (err) {
     $("sidecar-status").textContent = "Sidecar down";
     $("sidecar-status").classList.add("bad");

@@ -15,6 +15,12 @@ public static class DegradationSimulator
     public const double RefCRate = 1.0;
     public const double CRateExponent = 0.60;
 
+    /// <summary>
+    /// Ea and the C-rate exponent are scenario constants, not a fit to the NASA cells.
+    /// </summary>
+    public const string ScenarioClaim =
+        "Scenario acceleration referenced to 24 °C and 1C. Ea = 0.50 eV and the C-rate exponent 0.60 were not identified on the NASA cells.";
+
     public static double Kelvin(double tempC) => tempC + 273.15;
 
     public static double TemperatureAcceleration(double ambientC, double refC = RefTemperatureC, double eaEv = ArrheniusEaEv)
@@ -37,7 +43,10 @@ public static class DegradationSimulator
     }
 
     public static double CombinedAcceleration(double ambientC, double cRate) =>
-        TemperatureAcceleration(ambientC) * CRateAcceleration(cRate);
+        ScenarioAcceleration(ambientC, cRate, ArrheniusEaEv);
+
+    public static double ScenarioAcceleration(double ambientC, double cRate, double eaEv) =>
+        TemperatureAcceleration(ambientC, eaEv: eaEv) * CRateAcceleration(cRate);
 
     public static StressSimulation Simulate(BatteryRecord battery, StressScenario scenario)
     {

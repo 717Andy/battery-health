@@ -3,6 +3,7 @@ from batteryhealth.service.workspace import (
     cycle_at,
     estimate_rul_from_fade,
     has_trace,
+    intake_report,
 )
 
 
@@ -52,3 +53,12 @@ def test_summary_counts_traced_cycles():
     assert summary["nCycles"] == 10
     assert summary["tracedCycles"] == [1, 10]
     assert summary["defaultCycle"] == 10
+    assert summary["intakeLines"]
+    assert "Lab stop is 70%" in summary["intakeLines"][2]
+
+
+def test_intake_reports_both_eol_lines():
+    report = intake_report(_battery())
+    assert report["eol70Ah"] == 1.4
+    assert report["eol80Ah"] == 1.6
+    assert report["withTrace"] == 2

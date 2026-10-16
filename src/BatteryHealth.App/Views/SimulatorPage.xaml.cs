@@ -1,7 +1,6 @@
 using BatteryHealth.App.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
 
 namespace BatteryHealth.App.Views;
 
@@ -15,7 +14,11 @@ public sealed partial class SimulatorPage : Page
         ViewModel.Recalculate();
     }
 
-    private void OnChanged(object sender, RangeBaseValueChangedEventArgs e) => ViewModel.Recalculate();
-
     private void OnReset(object sender, RoutedEventArgs e) => ViewModel.ResetReference();
+
+    private async void OnLoadDemo(object sender, RoutedEventArgs e)
+    {
+        await App.Workspace.LoadFromPath(WorkspaceViewModel.DemoPath);
+        ViewModel.Recalculate();
+    }
 }

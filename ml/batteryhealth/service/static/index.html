@@ -30,16 +30,18 @@
       <section id="page-dashboard" class="page">
         <h2>Battery lifecycle</h2>
         <p id="summary-line" class="lede">Fleet diagnostic — local ONNX, no cloud.</p>
-        <p id="empty-hint" class="hint">Open a processed NASA JSON or the bundled B0005 demo.</p>
+        <p id="empty-hint" class="hint">Three ways to start. Processed NASA JSON opens directly. CALCE CSV or Excel opens directly; type the nameplate beside the cycle list.</p>
 
         <div class="toolbar">
           <button id="btn-open" class="accent" type="button">Open NASA JSON / CALCE file</button>
           <button id="btn-demo" type="button">Load B0005 demo</button>
-          <button id="btn-calce" type="button">Load CALCE sample</button>
           <input id="file-input" type="file" accept=".json,.csv,.xlsx,.xls" hidden>
           <span id="status-line" class="status">Load a NASA processed JSON or a CALCE CSV/Excel log.</span>
         </div>
         <p id="error-line" class="error" hidden></p>
+        <article id="intake-card" class="card hidden">
+          <p id="intake-text"></p>
+        </article>
 
         <div class="split">
           <article class="card chart-card">
@@ -47,10 +49,11 @@
             <canvas id="sensor-chart"></canvas>
           </article>
           <aside class="card cycle-card">
-            <h3>Discharge cycle</h3>
-            <input id="cycle-slider" type="range" min="1" max="1" value="1" disabled>
-            <p id="cycle-value">—</p>
-            <p class="hint">Voltage, current, and temperature overlay for the selected cycle. NASA impedance spectra are skipped. Charge traces plot when the file includes them. Demo traces: cycles 1, 40, 80, 120, last.</p>
+            <h3>Discharge cycles</h3>
+            <select id="cycle-list" size="10" disabled></select>
+            <label class="rated-label" for="rated-ah">Rated capacity (Ah)</label>
+            <input id="rated-ah" type="number" min="0.1" max="20" step="0.1" value="2.0" disabled>
+            <p class="hint">Each row is one discharge. The nameplate sets measured SoH and both end-of-life lines. The SoH model stays the NASA 2.0 Ah fit.</p>
           </aside>
         </div>
 
@@ -63,7 +66,12 @@
       <section id="page-forecast" class="page hidden">
         <h2>RUL &amp; SoH forecast</h2>
         <p id="forecast-headline" class="lede">Run a forecast on the loaded cell.</p>
-        <p id="eol-text" class="hint">RUL is cycles until 70% of rated capacity (NASA PCoE official: 2.0 Ah → 1.4 Ah). 80% is the common EV warranty / replacement threshold.</p>
+        <p id="forecast-empty" class="hint">Load a cell log, or open the B0005 demo.</p>
+        <div class="toolbar">
+          <button id="btn-demo-forecast" type="button">Load B0005 demo</button>
+          <button id="btn-export" class="accent" type="button">Export CSV and JSON</button>
+          <button id="btn-refresh" type="button">Re-run forecast</button>
+        </div>
 
         <div class="metrics-row">
           <article class="card metric">
@@ -72,19 +80,31 @@
             <p id="observed-text">No measured capacity on this cycle.</p>
           </article>
           <article class="card metric">
-            <p class="metric-label">Remaining useful life</p>
-            <p id="rul-text" class="metric-value">—</p>
-            <label class="toggle">
-              <input id="oem-toggle" type="checkbox">
-              <span>Use 80% OEM warranty threshold</span>
-            </label>
+            <p class="metric-label">RUL to 70%</p>
+            <p id="rul70-text" class="metric-value">—</p>
+            <p class="hint">Model: ONNX cycles until 70% of the 2.0 Ah training nameplate.</p>
+            <p id="rul70-fade" class="strong"></p>
+            <p class="hint">Fade curve: cycles until 70% of the nameplate.</p>
           </article>
           <article class="card metric">
-            <h3>Held-out model metrics</h3>
-            <p id="metrics-text">Train the Python pipeline to populate artifacts/metrics.json.</p>
-            <button id="btn-refresh" class="accent" type="button">Re-run forecast</button>
+            <p class="metric-label">RUL to 80% (fade curve)</p>
+            <p id="rul80-text" class="metric-value">—</p>
+            <p class="hint">Cycles until 80% of the nameplate on the measured fade curve.</p>
           </article>
         </div>
+        <p id="feature-shift"></p>
+        <p id="typical-error"></p>
+        <p id="applicability" class="hint"></p>
+        <p id="warning-text" class="error"></p>
+        <p id="metrics-text" class="hint"></p>
+
+        <article id="export-preview" class="card hidden">
+          <h3>Exported decision report</h3>
+          <p id="export-status" class="lede"></p>
+          <p class="hint">The desktop app writes these two files next to each other. This is the same CSV header and the JSON decision block.</p>
+          <pre id="export-csv" class="export-pre"></pre>
+          <pre id="export-json" class="export-pre"></pre>
+        </article>
 
         <article class="card chart-card">
           <h3>Predicted vs measured SoH across cycles</h3>
@@ -96,7 +116,9 @@
         <div class="sim-layout">
           <aside class="card sim-controls">
             <h2>Thermal &amp; load stress</h2>
-            <p id="physics-note" class="hint">Arrhenius temperature acceleration (Ea = 0.50 eV) × C-rate power law (C/1C)^0.60, referenced to the NASA 24 °C / 1C protocol.</p>
+            <p id="sim-empty" class="hint">Load a cell log, or open the B0005 demo.</p>
+            <button id="btn-demo-sim" type="button">Load B0005 demo</button>
+            <p id="physics-note" class="hint">Scenario acceleration referenced to 24 °C and 1C. Ea = 0.50 eV and the C-rate exponent 0.60 were not identified on the NASA cells.</p>
 
             <label for="temp-slider">Ambient temperature (°C)</label>
             <input id="temp-slider" type="range" min="-10" max="55" step="1" value="24">
@@ -107,6 +129,7 @@
             <p id="crate-value">1.0</p>
 
             <p id="af-text" class="af">AF = 1.00</p>
+            <p id="ea-band"></p>
             <p id="rul-compare">Load a battery to simulate thermal and load stress.</p>
             <button id="btn-reset" type="button">Reset to NASA 24 °C / 1C</button>
           </aside>
@@ -118,6 +141,9 @@
       </section>
     </main>
   </div>
+  <footer class="statusbar">
+    <span id="footer-status">Ready.</span>
+  </footer>
   <script src="/static/app.js"></script>
 </body>
 </html>

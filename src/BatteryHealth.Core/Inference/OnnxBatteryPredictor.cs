@@ -24,11 +24,14 @@ public sealed class OnnxBatteryPredictor : IDisposable
 
     public ForecastResult Predict(BatteryRecord battery, BatteryCycle cycle, double? sohOverride = null)
     {
-        var observed = cycle.ObservedSoh(battery.RatedCapacityAh);
+        var labelSoh = cycle.ObservedSoh(battery.RatedCapacityAh);
+        // The RUL head was trained on SoH = capacity / 2.0 Ah. A corrected nameplate
+        // changes the label and the fade thresholds, not that model input.
+        var modelSoh = cycle.ObservedSoh(BatteryRecord.TrainingRatedCapacityAh);
         Dictionary<string, double> features;
         if (cycle.HasTrace)
         {
-            features = CycleFeatureExtractor.Extract(cycle, observed ?? sohOverride);
+            features = CycleFeatureExtractor.Extract(cycle, modelSoh ?? sohOverride);
         }
         else if (cycle.Features is { Count: > 0 })
         {
@@ -42,7 +45,7 @@ public sealed class OnnxBatteryPredictor : IDisposable
         var sohVec = CycleFeatureExtractor.Vector(features, _spec.Soh.Columns.Count > 0 ? _spec.Soh.Columns : CycleFeatureExtractor.SohColumns);
         var predictedSoh = sohOverride ?? Run(_soh, _spec.Soh.InputName, sohVec);
         predictedSoh = Math.Clamp(predictedSoh, 0, 1.5);
-        features["soh"] = observed ?? predictedSoh;
+        features["soh"] = modelSoh ?? predictedSoh;
 
         var rulVec = CycleFeatureExtractor.Vector(features, _spec.Rul.Columns.Count > 0 ? _spec.Rul.Columns : CycleFeatureExtractor.RulColumns);
         var rul = Math.Max(0, Run(_rul, _spec.Rul.InputName, rulVec));
@@ -52,7 +55,7 @@ public sealed class OnnxBatteryPredictor : IDisposable
             BatteryId = battery.BatteryId,
             CycleIndex = cycle.CycleIndex,
             PredictedSoh = predictedSoh,
-            ObservedSoh = observed,
+            ObservedSoh = labelSoh,
             PredictedRulCycles = rul,
             EolCapacityFraction = battery.EolCapacityFraction,
             EolCapacityAh = battery.EolCapacityAh,

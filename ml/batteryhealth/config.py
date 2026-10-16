@@ -55,8 +55,23 @@ DEFAULT_MODEL_DIR = DEFAULT_ARTIFACT_DIR / "models"
 MAX_TRACE_POINTS = 256
 
 # Arrhenius / C-rate stress model (also implemented in BatteryHealth.Core).
+# These constants are a scenario overlay. They were not identified on the NASA cells.
 ARRHENIUS_EA_EV = 0.50
 BOLTZMANN_EV_PER_K = 8.617333262145e-5
 REF_TEMPERATURE_C = 24.0
 REF_C_RATE = 1.0
 C_RATE_EXPONENT = 0.60
+STRESS_CLAIM = (
+    "Scenario acceleration referenced to 24 °C and 1C. "
+    "Ea = 0.50 eV and the C-rate exponent 0.60 were not identified on the NASA cells."
+)
+
+# Shipped desktop weights vs the fit that produced the hold-out tables.
+PRODUCTION_FAMILY = "sklearn Pipeline(StandardScaler + GradientBoostingRegressor)"
+PRODUCTION_FIT_SCOPE = "all-rows"
+HOLDOUT_METRICS_FIT_SCOPE = "holdout-excluded"
+APPLICABILITY = (
+    "NASA PCoE constant-current 18650 discharges near 24 °C. "
+    "energy_wh and duration_s track delivered capacity on this protocol; "
+    "cycle_index tracks position along a cell's own fade curve."
+)

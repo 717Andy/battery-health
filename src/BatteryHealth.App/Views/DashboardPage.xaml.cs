@@ -1,7 +1,6 @@
 using BatteryHealth.App.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
 using Windows.Storage.Pickers;
 
 namespace BatteryHealth.App.Views;
@@ -32,20 +31,14 @@ public sealed partial class DashboardPage : Page
         var file = await picker.PickSingleFileAsync();
         if (file is not null)
         {
-            ViewModel.Workspace.LoadFromPath(file.Path);
+            await ViewModel.Workspace.LoadFromPath(file.Path);
             ViewModel.Refresh();
         }
     }
 
-    private void OnLoadDemo(object sender, RoutedEventArgs e)
+    private async void OnLoadDemo(object sender, RoutedEventArgs e)
     {
-        var demo = Path.Combine(AppContext.BaseDirectory, "Assets", "B0005.sample.json");
-        ViewModel.Workspace.LoadFromPath(demo);
+        await ViewModel.Workspace.LoadFromPath(WorkspaceViewModel.DemoPath);
         ViewModel.Refresh();
-    }
-
-    private void OnCycleChanged(object sender, RangeBaseValueChangedEventArgs e)
-    {
-        ViewModel.OnCycleSlider((int)Math.Round(e.NewValue));
     }
 }

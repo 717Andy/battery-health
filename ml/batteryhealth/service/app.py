@@ -9,6 +9,9 @@ the desktop Lifecycle / Forecast / Simulator screens.
 from __future__ import annotations
 
 import json
+import os
+import re
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -33,9 +36,13 @@ from batteryhealth.parsers.canonical import dict_to_summary
 from batteryhealth.parsers.nasa import parse_nasa_mat
 from batteryhealth.service.workspace import (
     battery_summary,
+    build_decision,
     cycle_at,
+    describe_ea_band,
+    describe_metrics,
     predict_cycle,
     predict_trajectory,
+    typical_protocol_error,
 )
 from batteryhealth.simulate import simulate_stress
 
@@ -55,6 +62,34 @@ app.add_middleware(
 )
 
 _SESSIONS: dict[str, Any] = {}
+MAX_UPLOAD_BYTES = 64 * 1024 * 1024
+_NASA_SUFFIXES = {".mat"}
+_CALCE_SUFFIXES = {".csv", ".xlsx", ".xls"}
+
+
+def safe_upload_suffix(filename: str | None, allowed: set[str]) -> str:
+    """Keep only a basename suffix. Client paths are never used as a destination."""
+    name = Path(filename or "").name
+    suffix = Path(name).suffix.lower()
+    if suffix not in allowed or re.fullmatch(r"\.[a-z0-9]{1,8}", suffix) is None:
+        raise HTTPException(400, f"Unsupported file type '{suffix or 'none'}'")
+    return suffix
+
+
+async def read_limited(file: UploadFile, limit: int | None = None) -> bytes:
+    cap = MAX_UPLOAD_BYTES if limit is None else limit
+    data = await file.read(cap + 1)
+    if len(data) > cap:
+        raise HTTPException(413, f"Upload exceeds {cap} bytes")
+    return data
+
+
+def write_temp(data: bytes, suffix: str) -> Path:
+    fd, name = tempfile.mkstemp(prefix="batteryhealth-", suffix=suffix)
+    os.close(fd)
+    path = Path(name)
+    path.write_bytes(data)
+    return path
 
 
 def _metrics_path() -> Path:
@@ -106,6 +141,13 @@ class StressRequest(BaseModel):
 class WorkspaceRequest(BaseModel):
     battery: dict[str, Any]
     cycle_index: int | None = None
+
+
+class ExportRequest(BaseModel):
+    battery: dict[str, Any]
+    cycle_index: int | None = None
+    ambient_temperature_c: float = 24.0
+    discharge_c_rate: float = 1.0
 
 
 @app.get("/health")
@@ -185,24 +227,24 @@ def predict_rul(req: PredictRequest) -> dict[str, Any]:
 @app.post("/simulate/stress")
 def stress(req: StressRequest) -> dict[str, Any]:
     try:
-        return simulate_stress(
+        result = simulate_stress(
             req.battery,
             ambient_c=req.ambient_temperature_c,
             c_rate=req.discharge_c_rate,
             current_cycle=req.current_cycle,
             eol_fraction=req.eol_fraction,
         )
+        result["eaBand"] = describe_ea_band(req.ambient_temperature_c, req.discharge_c_rate)
+        return result
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
 
 @app.post("/parse/nasa")
 async def parse_nasa(file: UploadFile = File(...)) -> dict[str, Any]:
-    suffix = Path(file.filename or "upload.mat").suffix.lower()
-    if suffix != ".mat":
-        raise HTTPException(400, "Upload a NASA .mat file")
-    tmp = Path("/tmp") / (file.filename or "upload.mat")
-    tmp.write_bytes(await file.read())
+    suffix = safe_upload_suffix(file.filename, _NASA_SUFFIXES)
+    data = await read_limited(file)
+    tmp = write_temp(data, suffix)
     try:
         return parse_nasa_mat(tmp)
     finally:
@@ -211,9 +253,9 @@ async def parse_nasa(file: UploadFile = File(...)) -> dict[str, Any]:
 
 @app.post("/parse/calce")
 async def parse_calce_upload(file: UploadFile = File(...)) -> dict[str, Any]:
-    name = file.filename or "upload.csv"
-    tmp = Path("/tmp") / name
-    tmp.write_bytes(await file.read())
+    suffix = safe_upload_suffix(file.filename, _CALCE_SUFFIXES)
+    data = await read_limited(file)
+    tmp = write_temp(data, suffix)
     try:
         return parse_calce(tmp)
     except ValueError as exc:
@@ -284,6 +326,32 @@ def workspace_trajectory(req: WorkspaceRequest) -> dict[str, Any]:
         return {"points": predict_trajectory(_ort_predict, req.battery)}
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/workspace/export")
+def workspace_export(req: ExportRequest) -> dict[str, Any]:
+    try:
+        metrics = json.loads(_metrics_path().read_text()) if _metrics_path().exists() else None
+        return build_decision(
+            _ort_predict,
+            req.battery,
+            cycle_index=req.cycle_index,
+            ambient_c=req.ambient_temperature_c,
+            c_rate=req.discharge_c_rate,
+            typical_error=typical_protocol_error(metrics),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/workspace/copy")
+def workspace_copy() -> dict[str, Any]:
+    metrics = json.loads(_metrics_path().read_text()) if _metrics_path().exists() else None
+    return {
+        "metricsText": describe_metrics(metrics),
+        "typicalError": typical_protocol_error(metrics),
+        "eaBand24C1C": describe_ea_band(24.0, 1.0),
+    }
 
 
 @app.get("/sample/{battery_id}")

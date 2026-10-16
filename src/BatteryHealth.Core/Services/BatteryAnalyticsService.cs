@@ -22,10 +22,21 @@ public sealed class BatteryAnalyticsService : IDisposable
     public ForecastResult Forecast(BatteryRecord battery, int? cycleIndex = null)
     {
         var cycle = cycleIndex is { } idx
-            ? battery.CycleAt(idx) ?? throw new ArgumentOutOfRangeException(nameof(cycleIndex))
+            ? battery.DischargeAt(idx) ?? throw new InvalidOperationException($"No discharge cycle {idx}.")
             : battery.DischargeCycles.LastOrDefault()
               ?? throw new InvalidOperationException("No discharge cycles");
         return _predictor.Predict(battery, cycle);
+    }
+
+    public DecisionReport BuildDecision(
+        BatteryRecord battery,
+        IReadOnlyList<ForecastResult> trajectory,
+        StressScenario scenario,
+        string? typicalProtocolError = null,
+        int? decisionCycle = null)
+    {
+        var stress = Simulate(battery, scenario);
+        return DecisionReport.Create(battery, trajectory, stress, typicalProtocolError, decisionCycle);
     }
 
     public IReadOnlyList<ForecastResult> ForecastTrajectory(BatteryRecord battery) =>

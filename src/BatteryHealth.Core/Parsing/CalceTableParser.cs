@@ -118,6 +118,7 @@ public static class CalceTableParser
             BatteryId = batteryId,
             Source = source,
             RatedCapacityAh = ratedCapacityAh,
+            RatedCapacityAssumed = true,
             EolCapacityFraction = 0.70,
             Chemistry = "Li-ion (CALCE)",
             AmbientTemperatureC = ambientTempC,

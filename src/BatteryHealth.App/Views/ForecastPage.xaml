@@ -14,38 +14,52 @@
         <StackPanel Spacing="6">
             <TextBlock Text="RUL &amp; SoH forecast" Style="{StaticResource TitleTextBlockStyle}"/>
             <TextBlock Text="{x:Bind ViewModel.Headline, Mode=OneWay}" Opacity="0.8"/>
-            <TextBlock Text="{x:Bind ViewModel.EolText, Mode=OneWay}" TextWrapping="Wrap" Opacity="0.75"/>
+            <TextBlock Text="{x:Bind ViewModel.EmptyHint, Mode=OneWay}" Opacity="0.75" TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Load B0005 demo" Click="OnLoadDemo"/>
+                <Button Content="Export CSV and JSON" Click="OnExport" Style="{StaticResource AccentButtonStyle}"/>
+                <Button Content="Re-run forecast" Click="OnRefresh"/>
+            </StackPanel>
         </StackPanel>
 
-        <Grid Grid.Row="1" ColumnSpacing="16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="1.4*"/>
-            </Grid.ColumnDefinitions>
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Predicted SoH" Opacity="0.7"/>
-                    <TextBlock Text="{x:Bind ViewModel.SohText, Mode=OneWay}" FontSize="36" FontWeight="SemiBold"/>
-                    <TextBlock Text="{x:Bind ViewModel.ObservedText, Mode=OneWay}" TextWrapping="Wrap"/>
-                </StackPanel>
-            </Border>
-            <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Remaining useful life" Opacity="0.7"/>
-                    <TextBlock Text="{x:Bind ViewModel.RulText, Mode=OneWay}" FontSize="36" FontWeight="SemiBold"/>
-                    <ToggleSwitch Header="Use 80% OEM warranty threshold"
-                                  IsOn="{x:Bind ViewModel.UseOemThreshold, Mode=TwoWay}"/>
-                </StackPanel>
-            </Border>
-            <Border Grid.Column="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
-                <StackPanel Spacing="8">
-                    <TextBlock Text="Held-out model metrics" FontWeight="SemiBold"/>
-                    <TextBlock Text="{x:Bind ViewModel.MetricsText, Mode=OneWay}" TextWrapping="Wrap"/>
-                    <Button Content="Re-run forecast" Click="OnRefresh" Style="{StaticResource AccentButtonStyle}"/>
-                </StackPanel>
-            </Border>
-        </Grid>
+        <StackPanel Grid.Row="1" Spacing="12">
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Predicted SoH" Opacity="0.7"/>
+                        <TextBlock Text="{x:Bind ViewModel.SohText, Mode=OneWay}" FontSize="32" FontWeight="SemiBold"/>
+                        <TextBlock Text="{x:Bind ViewModel.ObservedText, Mode=OneWay}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="RUL to 70%" Opacity="0.7"/>
+                        <TextBlock Text="{x:Bind ViewModel.Rul70Text, Mode=OneWay}" FontSize="32" FontWeight="SemiBold"/>
+                        <TextBlock Text="Model: ONNX cycles until 70% of the 2.0 Ah training nameplate." TextWrapping="Wrap" Opacity="0.75"/>
+                        <TextBlock Text="{x:Bind ViewModel.Rul70FadeText, Mode=OneWay}" FontWeight="SemiBold"/>
+                        <TextBlock Text="Fade curve: cycles until 70% of the nameplate." TextWrapping="Wrap" Opacity="0.75"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="RUL to 80% (fade curve)" Opacity="0.7"/>
+                        <TextBlock Text="{x:Bind ViewModel.Rul80Text, Mode=OneWay}" FontSize="32" FontWeight="SemiBold"/>
+                        <TextBlock Text="Cycles until 80% of the nameplate on the measured fade curve." TextWrapping="Wrap" Opacity="0.75"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+            <TextBlock Text="{x:Bind ViewModel.FeatureShiftText, Mode=OneWay}" TextWrapping="Wrap"/>
+            <TextBlock Text="{x:Bind ViewModel.TypicalErrorText, Mode=OneWay}" TextWrapping="Wrap"/>
+            <TextBlock Text="{x:Bind ViewModel.ApplicabilityText, Mode=OneWay}" TextWrapping="Wrap" Opacity="0.8"/>
+            <TextBlock Text="{x:Bind ViewModel.WarningText, Mode=OneWay}" TextWrapping="Wrap"
+                       Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+            <TextBlock Text="{x:Bind ViewModel.MetricsText, Mode=OneWay}" TextWrapping="Wrap" Opacity="0.7"/>
+        </StackPanel>
 
         <Border Grid.Row="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12">
             <Grid>

@@ -15,6 +15,7 @@ public partial class SimulatorViewModel : ObservableObject
     [ObservableProperty] private double ambientC = 24;
     [ObservableProperty] private double cRate = 1.0;
     [ObservableProperty] private string afText = "AF = 1.00";
+    [ObservableProperty] private string eaBandText = "";
     [ObservableProperty] private string rulCompare = "Load a battery to simulate thermal and load stress.";
     [ObservableProperty] private string physicsNote = DegradationSimulator.ScenarioClaim;
     [ObservableProperty] private string emptyHint = "Load a cell log, or open the B0005 demo.";
@@ -42,6 +43,7 @@ public partial class SimulatorViewModel : ObservableObject
     public void Recalculate()
     {
         EmptyHint = Workspace.Battery is null ? "Load a cell log, or open the B0005 demo." : "";
+        EaBandText = DescribeEaBand(AmbientC, CRate);
         if (Workspace.Battery is null)
         {
             FadeSeries = [];
@@ -66,6 +68,16 @@ public partial class SimulatorViewModel : ObservableObject
             $"EOL cycle {sim.BaselineEolCycle} → {sim.StressedEolCycle}" +
             (sim.StressedExtrapolated ? " (extrapolated past the measured window)." : ".");
         FadeSeries = ChartFactory.FadeSeries(Workspace.Battery, sim.Stressed);
+    }
+
+    internal static string DescribeEaBand(double ambientC, double cRate)
+    {
+        var low = DegradationSimulator.ScenarioAcceleration(ambientC, cRate, 0.30);
+        var mid = DegradationSimulator.ScenarioAcceleration(ambientC, cRate, 0.50);
+        var high = DegradationSimulator.ScenarioAcceleration(ambientC, cRate, 0.70);
+        return
+            $"At {ambientC:0} °C and {cRate:0.00} C, acceleration is {low:0.00} at 0.30 eV, " +
+            $"{mid:0.00} at 0.50 eV, and {high:0.00} at 0.70 eV. These constants were not fit to the NASA cells.";
     }
 
     partial void OnAmbientCChanged(double value) => Recalculate();

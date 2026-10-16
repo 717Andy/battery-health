@@ -208,8 +208,8 @@ dotnet run --project src\BatteryHealth.App\BatteryHealth.App.csproj -p:Platform=
 In the app:
 
 1. **Lifecycle dashboard** — *Load B0005 demo* or open `data/processed/B0005.json` / a CALCE file. Pick a discharge from the list (the row is that cycle index, not the nearest earlier one). Set the nameplate if the file did not carry one. The lower chart is capacity fade.
-2. **RUL forecast** — predicted SoH, ONNX cycles to the NASA 70% line, and fade-curve cycles to 80% of the nameplate, plus the typical miss on an unseen cell from this protocol. Export writes that trajectory and the current stress scenario as CSV and JSON.
-3. **Stress simulator** — sliders for ambient °C and C-rate; overlay stressed fade and the new RUL. The forecast export uses the scenario last set here.
+2. **RUL forecast** — predicted SoH, the model’s cycles to 70% of 2.0 Ah, the fade curve’s cycles to 70% and 80% of the nameplate, and how `energy_wh`, `duration_s`, and `time_to_3v0` moved versus the first scored discharge. Export marks that cycle and writes both 70% definitions plus the Ea 0.30 / 0.50 / 0.70 accelerations.
+3. **Stress simulator** — sliders for ambient °C and C-rate; overlay stressed fade and the new RUL. The same sliders show acceleration at Ea 0.30, 0.50, and 0.70 eV. The forecast export uses the scenario last set here.
 
 The demo JSON keeps fade for every B0005 discharge and full traces on cycles 1, 40, 80, 120, and the last cycle (to keep the file small). Processed JSON from the download script has traces for every charge and discharge.
 

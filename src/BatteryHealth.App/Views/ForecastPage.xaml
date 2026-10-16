@@ -38,9 +38,11 @@
                 </Border>
                 <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
                     <StackPanel Spacing="4">
-                        <TextBlock Text="RUL to 70% (model)" Opacity="0.7"/>
+                        <TextBlock Text="RUL to 70%" Opacity="0.7"/>
                         <TextBlock Text="{x:Bind ViewModel.Rul70Text, Mode=OneWay}" FontSize="32" FontWeight="SemiBold"/>
-                        <TextBlock Text="ONNX cycles until 70% of the 2.0 Ah training nameplate." TextWrapping="Wrap" Opacity="0.75"/>
+                        <TextBlock Text="Model: ONNX cycles until 70% of the 2.0 Ah training nameplate." TextWrapping="Wrap" Opacity="0.75"/>
+                        <TextBlock Text="{x:Bind ViewModel.Rul70FadeText, Mode=OneWay}" FontWeight="SemiBold"/>
+                        <TextBlock Text="Fade curve: cycles until 70% of the nameplate." TextWrapping="Wrap" Opacity="0.75"/>
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
@@ -51,6 +53,7 @@
                     </StackPanel>
                 </Border>
             </Grid>
+            <TextBlock Text="{x:Bind ViewModel.FeatureShiftText, Mode=OneWay}" TextWrapping="Wrap"/>
             <TextBlock Text="{x:Bind ViewModel.TypicalErrorText, Mode=OneWay}" TextWrapping="Wrap"/>
             <TextBlock Text="{x:Bind ViewModel.ApplicabilityText, Mode=OneWay}" TextWrapping="Wrap" Opacity="0.8"/>
             <TextBlock Text="{x:Bind ViewModel.WarningText, Mode=OneWay}" TextWrapping="Wrap"

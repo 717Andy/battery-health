@@ -56,8 +56,12 @@ switch (command)
         var discharges = battery.DischargeCycles.ToList();
         var first = discharges.FirstOrDefault()?.CapacityAh;
         var last = discharges.LastOrDefault()?.CapacityAh;
-        Console.WriteLine($"{battery.BatteryId}  source={battery.Source}  cycles={discharges.Count}");
-        Console.WriteLine($"rated={battery.RatedCapacityAh} Ah  EOL={battery.EolCapacityFraction:P0} ({battery.EolCapacityAh:F2} Ah)");
+        Console.WriteLine($"{battery.BatteryId}");
+        foreach (var line in IntakeReport.From(battery).Lines)
+        {
+            Console.WriteLine(line);
+        }
+
         Console.WriteLine($"capacity first/last = {first:F3} / {last:F3} Ah");
         return 0;
 

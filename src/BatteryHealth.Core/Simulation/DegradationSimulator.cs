@@ -59,7 +59,8 @@ public static class DegradationSimulator
             throw new InvalidOperationException("Battery record has no discharge capacities");
         }
 
-        var afT = TemperatureAcceleration(scenario.AmbientTemperatureC);
+        var ea = scenario.ArrheniusEaEv ?? ArrheniusEaEv;
+        var afT = TemperatureAcceleration(scenario.AmbientTemperatureC, eaEv: ea);
         var afC = CRateAcceleration(scenario.DischargeCRate);
         var af = afT * afC;
 

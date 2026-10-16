@@ -50,6 +50,18 @@ public sealed class DecisionReport
     public double AccelerationAtEa030 { get; init; }
     public double AccelerationAtEa050 { get; init; }
     public double AccelerationAtEa070 { get; init; }
+    public int StressStartCycle { get; init; }
+    public int BaselineRulTo70 { get; init; }
+    public int StressedRulTo70 { get; init; }
+    public int BaselineRulTo80 { get; init; }
+    public int StressedRulTo80 { get; init; }
+    public int StressedRulTo70Ea030 { get; init; }
+    public int StressedRulTo70Ea050 { get; init; }
+    public int StressedRulTo70Ea070 { get; init; }
+    public int StressedRulTo80Ea030 { get; init; }
+    public int StressedRulTo80Ea050 { get; init; }
+    public int StressedRulTo80Ea070 { get; init; }
+    public bool StressedEolExtrapolated { get; init; }
     public string ScenarioClaim { get; init; } = DegradationSimulator.ScenarioClaim;
     public int? DecisionCycle { get; init; }
     public DecisionSummary? Decision { get; init; }
@@ -97,6 +109,7 @@ public sealed class DecisionReport
         var ea030 = DegradationSimulator.ScenarioAcceleration(stress.AmbientTemperatureC, stress.DischargeCRate, 0.30);
         var ea050 = DegradationSimulator.ScenarioAcceleration(stress.AmbientTemperatureC, stress.DischargeCRate, 0.50);
         var ea070 = DegradationSimulator.ScenarioAcceleration(stress.AmbientTemperatureC, stress.DischargeCRate, 0.70);
+        var outlook = StressOutlook.From(battery, stress.AmbientTemperatureC, stress.DischargeCRate, stress.CurrentCycle);
         DecisionSummary? decision = null;
         if (selected is { } chosen && rows.FirstOrDefault(row => row.CycleIndex == chosen) is { } chosenRow)
         {
@@ -131,6 +144,18 @@ public sealed class DecisionReport
             AccelerationAtEa030 = ea030,
             AccelerationAtEa050 = ea050,
             AccelerationAtEa070 = ea070,
+            StressStartCycle = outlook.StartCycle,
+            BaselineRulTo70 = outlook.BaselineTo70,
+            StressedRulTo70 = outlook.StressedTo70,
+            BaselineRulTo80 = outlook.BaselineTo80,
+            StressedRulTo80 = outlook.StressedTo80,
+            StressedRulTo70Ea030 = outlook.StressedTo70Ea030,
+            StressedRulTo70Ea050 = outlook.StressedTo70Ea050,
+            StressedRulTo70Ea070 = outlook.StressedTo70Ea070,
+            StressedRulTo80Ea030 = outlook.StressedTo80Ea030,
+            StressedRulTo80Ea050 = outlook.StressedTo80Ea050,
+            StressedRulTo80Ea070 = outlook.StressedTo80Ea070,
+            StressedEolExtrapolated = outlook.StressedExtrapolated,
             DecisionCycle = selected,
             Decision = decision,
             Rows = rows,
@@ -166,7 +191,7 @@ public sealed class DecisionReport
     {
         var culture = CultureInfo.InvariantCulture;
         var builder = new StringBuilder();
-        builder.AppendLine("cycle_index,measured_capacity_ah,predicted_soh,measured_soh,rul_to_70_cycles,rul_to_70_fade_cycles,rul_to_80_cycles,has_trace,selected,scenario_temperature_c,scenario_c_rate,acceleration_factor,acceleration_ea_0_30,acceleration_ea_0_50,acceleration_ea_0_70");
+        builder.AppendLine("cycle_index,measured_capacity_ah,predicted_soh,measured_soh,rul_to_70_cycles,rul_to_70_fade_cycles,rul_to_80_cycles,has_trace,selected,scenario_temperature_c,scenario_c_rate,acceleration_factor,acceleration_ea_0_30,acceleration_ea_0_50,acceleration_ea_0_70,baseline_rul_to_70,stressed_rul_to_70,baseline_rul_to_80,stressed_rul_to_80,stressed_rul_to_70_ea_0_30,stressed_rul_to_70_ea_0_50,stressed_rul_to_70_ea_0_70,stressed_rul_to_80_ea_0_30,stressed_rul_to_80_ea_0_50,stressed_rul_to_80_ea_0_70");
         foreach (var row in Rows)
         {
             builder.Append(row.CycleIndex.ToString(culture)).Append(',')
@@ -183,7 +208,17 @@ public sealed class DecisionReport
                 .Append(AccelerationFactor.ToString("G9", culture)).Append(',')
                 .Append(AccelerationAtEa030.ToString("G9", culture)).Append(',')
                 .Append(AccelerationAtEa050.ToString("G9", culture)).Append(',')
-                .Append(AccelerationAtEa070.ToString("G9", culture))
+                .Append(AccelerationAtEa070.ToString("G9", culture)).Append(',')
+                .Append(BaselineRulTo70.ToString(culture)).Append(',')
+                .Append(StressedRulTo70.ToString(culture)).Append(',')
+                .Append(BaselineRulTo80.ToString(culture)).Append(',')
+                .Append(StressedRulTo80.ToString(culture)).Append(',')
+                .Append(StressedRulTo70Ea030.ToString(culture)).Append(',')
+                .Append(StressedRulTo70Ea050.ToString(culture)).Append(',')
+                .Append(StressedRulTo70Ea070.ToString(culture)).Append(',')
+                .Append(StressedRulTo80Ea030.ToString(culture)).Append(',')
+                .Append(StressedRulTo80Ea050.ToString(culture)).Append(',')
+                .Append(StressedRulTo80Ea070.ToString(culture))
                 .AppendLine();
         }
 

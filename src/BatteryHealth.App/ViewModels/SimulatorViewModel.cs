@@ -17,6 +17,10 @@ public partial class SimulatorViewModel : ObservableObject
     [ObservableProperty] private string afText = "AF = 1.00";
     [ObservableProperty] private string eaBandText = "";
     [ObservableProperty] private string rulCompare = "Load a battery to simulate thermal and load stress.";
+    [ObservableProperty] private string outlookText = "";
+    [ObservableProperty] private string eaRulText = "";
+    [ObservableProperty] private string extrapolatedText = "";
+    [ObservableProperty] private string chartTitle = "Baseline fade vs stressed fade";
     [ObservableProperty] private string physicsNote = DegradationSimulator.ScenarioClaim;
     [ObservableProperty] private string emptyHint = "Load a cell log, or open the B0005 demo.";
     [ObservableProperty] private ISeries[] fadeSeries = [];
@@ -48,11 +52,20 @@ public partial class SimulatorViewModel : ObservableObject
         {
             FadeSeries = [];
             RulCompare = "Load a battery to simulate thermal and load stress.";
+            OutlookText = "";
+            EaRulText = "";
+            ExtrapolatedText = "";
+            ChartTitle = "Baseline fade vs stressed fade";
             return;
         }
 
         Workspace.ScenarioAmbientC = AmbientC;
         Workspace.ScenarioCRate = CRate;
+        var outlook = StressOutlook.From(
+            Workspace.Battery,
+            AmbientC,
+            CRate,
+            Workspace.SelectedCycle?.CycleIndex);
         var sim = Workspace.Service.Simulate(Workspace.Battery, new StressScenario
         {
             AmbientTemperatureC = AmbientC,
@@ -62,12 +75,19 @@ public partial class SimulatorViewModel : ObservableObject
 
         AfText = $"AF = {sim.AccelerationFactor:0.00}  (temperature {sim.TemperatureAcceleration:0.00} × C-rate {sim.CRateAcceleration:0.00})";
         RulCompare =
-            $"From cycle {sim.CurrentCycle}: baseline RUL {sim.BaselineRulCycles} cycles → " +
-            $"stressed RUL {sim.StressedRulCycles} cycles " +
-            $"({sim.AmbientTemperatureC:0} °C, {sim.DischargeCRate:0.00} C). " +
-            $"EOL cycle {sim.BaselineEolCycle} → {sim.StressedEolCycle}" +
-            (sim.StressedExtrapolated ? " (extrapolated past the measured window)." : ".");
-        FadeSeries = ChartFactory.FadeSeries(Workspace.Battery, sim.Stressed);
+            $"Stress starts after cycle {outlook.StartCycle}. Capacity already lost stays as measured.";
+        OutlookText =
+            $"To 70% of the nameplate: baseline {outlook.BaselineTo70} cycles, stressed {outlook.StressedTo70} cycles. " +
+            $"To 80% of the nameplate: baseline {outlook.BaselineTo80} cycles, stressed {outlook.StressedTo80} cycles.";
+        EaRulText =
+            $"Stressed cycles to 70% at 0.30 / 0.50 / 0.70 eV: {outlook.StressedTo70Ea030} / {outlook.StressedTo70Ea050} / {outlook.StressedTo70Ea070}. " +
+            $"To 80%: {outlook.StressedTo80Ea030} / {outlook.StressedTo80Ea050} / {outlook.StressedTo80Ea070}. " +
+            "The curve uses 0.50 eV.";
+        ExtrapolatedText = outlook.StressedExtrapolated
+            ? "Stressed end of life is past the last measured cycle."
+            : "";
+        ChartTitle = $"Stress applied after cycle {outlook.StartCycle}";
+        FadeSeries = ChartFactory.FadeSeries(Workspace.Battery, outlook.StressedCurve);
     }
 
     internal static string DescribeEaBand(double ambientC, double cRate)

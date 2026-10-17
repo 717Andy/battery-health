@@ -1,4 +1,4 @@
-"""Export sklearn / XGBoost / optional PyTorch models to ONNX."""
+"""Export sklearn / XGBoost models to ONNX."""
 
 from __future__ import annotations
 
@@ -48,24 +48,6 @@ def export_xgboost(model, n_features: int, path: Path, input_name: str = "featur
         target_opset=15,
     )
     _write(path, onx.SerializeToString())
-    return path
-
-
-def export_torch(model, n_features: int, path: Path, input_name: str = "features") -> Path:
-    import torch
-
-    model.eval()
-    dummy = torch.zeros(1, n_features, dtype=torch.float32)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    torch.onnx.export(
-        model,
-        dummy,
-        str(path),
-        input_names=[input_name],
-        output_names=["variable"],
-        dynamic_axes={input_name: {0: "batch"}, "variable": {0: "batch"}},
-        opset_version=15,
-    )
     return path
 
 

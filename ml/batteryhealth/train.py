@@ -45,14 +45,6 @@ try:
 except ImportError:  # pragma: no cover
     HAS_XGB = False
 
-try:
-    import torch
-    from torch import nn
-
-    HAS_TORCH = True
-except ImportError:  # pragma: no cover
-    HAS_TORCH = False
-
 
 def load_records(processed_dir: Path | None, raw_dir: Path | None) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
@@ -116,45 +108,7 @@ def _xgb():
     )
 
 
-class _Mlp(nn.Module if HAS_TORCH else object):  # type: ignore[misc]
-    def __init__(self, n_in: int):
-        if not HAS_TORCH:
-            raise RuntimeError("PyTorch is not installed")
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(n_in, 32),
-            nn.ReLU(),
-            nn.Linear(32, 16),
-            nn.ReLU(),
-            nn.Linear(16, 1),
-        )
-
-    def forward(self, x):
-        return self.net(x)
-
-
-def _fit_torch(x: np.ndarray, y: np.ndarray, epochs: int = 80) -> Any:
-    assert HAS_TORCH
-    model = _Mlp(x.shape[1])
-    opt = torch.optim.Adam(model.parameters(), lr=1e-3)
-    loss_fn = nn.MSELoss()
-    xt = torch.tensor(x, dtype=torch.float32)
-    yt = torch.tensor(y.reshape(-1, 1), dtype=torch.float32)
-    model.train()
-    for _ in range(epochs):
-        opt.zero_grad()
-        pred = model(xt)
-        loss = loss_fn(pred, yt)
-        loss.backward()
-        opt.step()
-    model.eval()
-    return model
-
-
 def _predict_any(model, x: np.ndarray) -> np.ndarray:
-    if HAS_TORCH and isinstance(model, nn.Module):
-        with torch.no_grad():
-            return model(torch.tensor(x, dtype=torch.float32)).numpy().reshape(-1)
     return np.asarray(model.predict(x), dtype=float).reshape(-1)
 
 
@@ -198,13 +152,6 @@ def _eval_family(frame: pd.DataFrame, feature_cols: tuple[str, ...], target: str
             "leaveOneBatteryOut": lobo,
         }
 
-    if HAS_TORCH:
-        model = _fit_torch(x_train, y_train)
-        pred = _predict_any(model, x_test)
-        report["torch_mlp"] = {
-            "holdoutBattery": holdout,
-            "holdout": regression_metrics(y_test, pred),
-        }
     return report
 
 
@@ -319,7 +266,7 @@ def train_and_export(
             "applicability": APPLICABILITY,
             "reason": (
                 "GBR converts reliably through skl2onnx and matches ONNX Runtime on Linux/.NET. "
-                "XGBoost and a PyTorch MLP are trained for comparison; see soh/rul reports. "
+                "XGBoost is trained for comparison; see soh/rul reports. There is no neural net. "
                 "soh.onnx and rul.onnx are the all-rows fit. Hold-out and leave-one-battery-out "
                 "blocks are a different fit that excludes the scored cell."
             ),

@@ -310,7 +310,7 @@
   },
   "productionModel": {
     "type": "sklearn Pipeline(StandardScaler + GradientBoostingRegressor)",
-    "reason": "GBR converts reliably through skl2onnx and matches ONNX Runtime on Linux/.NET. XGBoost and a PyTorch MLP are trained for comparison; see soh/rul reports. soh.onnx and rul.onnx are the all-rows fit. Hold-out and leave-one-battery-out blocks are a different fit that excludes the scored cell.",
+    "reason": "GBR converts reliably through skl2onnx and matches ONNX Runtime on Linux/.NET. XGBoost is trained for comparison; see soh/rul reports. There is no neural net. soh.onnx and rul.onnx are the all-rows fit. Hold-out and leave-one-battery-out blocks are a different fit that excludes the scored cell.",
     "onnxVerification": {
       "soh": {
         "path": "/workspace/artifacts/models/soh.onnx",

@@ -30,6 +30,7 @@ public partial class ForecastViewModel : ObservableObject
     [ObservableProperty] private string headline = "Run a forecast on the loaded cell.";
 
     private string? _typicalError;
+    private double? _sohHoldoutRmse;
 
     public Axis[] CycleAxis { get; } = ChartFactory.CycleAxis();
     public Axis[] SohAxis { get; } = ChartFactory.SohAxis();
@@ -97,7 +98,7 @@ public partial class ForecastViewModel : ObservableObject
 
             try
             {
-                SohSeries = ChartFactory.SohSeries(snapshot.Points, rec);
+                SohSeries = ChartFactory.SohSeries(snapshot.Points, rec, forecast.CycleIndex, _sohHoldoutRmse);
             }
             catch (Exception ex)
             {
@@ -196,6 +197,11 @@ public partial class ForecastViewModel : ObservableObject
             {
                 _typicalError = ProtocolError.TypicalMiss(rmse, n);
                 TypicalErrorText = _typicalError;
+            }
+
+            if (ProtocolError.TryReadSohHoldoutRmse(json, out var sohRmse))
+            {
+                _sohHoldoutRmse = sohRmse;
             }
 
             return;

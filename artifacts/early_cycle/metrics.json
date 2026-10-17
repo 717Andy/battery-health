@@ -1,0 +1,273 @@
+{
+  "citation": {
+    "nasa": "B. Saha and K. Goebel (2007). \u201cBattery Data Set\u201d, NASA Prognostics Data Repository, NASA Ames Research Center, Moffett Field, CA.",
+    "calce": "CALCE Battery Research Group, University of Maryland. CS2 pouch cells (LiCoO2, 1.1 Ah). https://web.calce.umd.edu/batteries/data/"
+  },
+  "honesty": "Target is the cycle where a rolling-median capacity first drops to 80% of that cell's own initial capacity. NASA cells hit that line around 60\u2013125 cycles, so K=40 is used there. CALCE CS2 1C cells last ~500\u2013600 cycles, so K=100. The Severson-style feature is log variance of early capacity, not \u0394Q(V); we do not have interpolated voltage-capacity curves for the CALCE zip extract.",
+  "nasaK40": {
+    "k": 40,
+    "target": "80% of initial (smoothed) capacity",
+    "nCells": 4,
+    "cells": [
+      "B0005",
+      "B0006",
+      "B0007",
+      "B0018"
+    ],
+    "perCell": {
+      "B0005": {
+        "y": 107.0,
+        "persist": 88.33333333333333,
+        "linear": 349.58487842769017,
+        "ridge": 120.38521224248557,
+        "severson_logvar": 122.85752043218226,
+        "q0": 1.8353058609027602
+      },
+      "B0006": {
+        "y": 61.0,
+        "persist": 103.66666666666667,
+        "linear": 72.52597538297759,
+        "ridge": 105.92287422324904,
+        "severson_logvar": 77.66792296989087,
+        "q0": 2.0133055184431026
+      },
+      "B0007": {
+        "y": 125.0,
+        "persist": 82.33333333333333,
+        "linear": 304.6777359170498,
+        "ridge": 106.18687172259644,
+        "severson_logvar": 108.8794246614286,
+        "q0": 1.8806815117064395
+      },
+      "B0018": {
+        "y": 79.0,
+        "persist": 97.66666666666667,
+        "linear": 67.79812719404389,
+        "ridge": 52.411561840513784,
+        "severson_logvar": 62.06681881969946,
+        "q0": 1.8316869057190854
+      }
+    },
+    "pooled": {
+      "persist": {
+        "rmse": 32.93090409394259,
+        "mae": 30.66666666666667,
+        "r2": -0.7777777777777783,
+        "n": 4
+      },
+      "linear": {
+        "rmse": 151.15376449905582,
+        "mae": 111.24761563341842,
+        "r2": -36.45485331514104,
+        "n": 4
+      },
+      "ridge": {
+        "rmse": 28.5399166720801,
+        "mae": 25.927413225656096,
+        "r2": -0.33528990762176325,
+        "n": 4
+      },
+      "severson_logvar": {
+        "rmse": 16.40035201237106,
+        "mae": 16.394799980236265,
+        "r2": 0.5590630391316664,
+        "n": 4
+      }
+    },
+    "cellTable": [
+      {
+        "battery_id": "B0005",
+        "source": "nasa",
+        "n": 168,
+        "q0": 1.8353058609027602,
+        "eol_cycle": 107.0,
+        "eol_censored": false,
+        "last_capacity_ah": 1.3250793286429356
+      },
+      {
+        "battery_id": "B0006",
+        "source": "nasa",
+        "n": 168,
+        "q0": 2.0133055184431026,
+        "eol_cycle": 61.0,
+        "eol_censored": false,
+        "last_capacity_ah": 1.1856752327929356
+      },
+      {
+        "battery_id": "B0007",
+        "source": "nasa",
+        "n": 168,
+        "q0": 1.8806815117064395,
+        "eol_cycle": 125.0,
+        "eol_censored": false,
+        "last_capacity_ah": 1.4324552720625434
+      },
+      {
+        "battery_id": "B0018",
+        "source": "nasa",
+        "n": 132,
+        "q0": 1.8316869057190854,
+        "eol_cycle": 79.0,
+        "eol_censored": false,
+        "last_capacity_ah": 1.341051440640485
+      }
+    ]
+  },
+  "calceK100": {
+    "k": 100,
+    "target": "80% of initial (smoothed) capacity",
+    "nCells": 3,
+    "cells": [
+      "CS2_35",
+      "CS2_36",
+      "CS2_38"
+    ],
+    "perCell": {
+      "CS2_35": {
+        "y": 542.0,
+        "persist": 549.0,
+        "linear": 201.069249553556,
+        "ridge": 100.0,
+        "severson_logvar": 100.0,
+        "q0": 1.1296364681289206
+      },
+      "CS2_36": {
+        "y": 498.0,
+        "persist": 571.0,
+        "linear": 243.2273790068745,
+        "ridge": 625.0217978121095,
+        "severson_logvar": 590.4445622270855,
+        "q0": 1.1360043229608379
+      },
+      "CS2_38": {
+        "y": 600.0,
+        "persist": 520.0,
+        "linear": 234.82940367767634,
+        "ridge": 497.59717450628966,
+        "severson_logvar": 489.32122899496085,
+        "q0": 1.1311552359731625
+      }
+    },
+    "pooled": {
+      "persist": {
+        "rmse": 62.65780079128216,
+        "mae": 53.333333333333336,
+        "r2": -1.2500000000000004,
+        "n": 3
+      },
+      "linear": {
+        "rmse": 323.7758635363275,
+        "mae": 320.29132258729777,
+        "r2": -59.07878809718869,
+        "n": 3
+      },
+      "ridge": {
+        "rmse": 272.02014373235653,
+        "mae": 223.80820776860662,
+        "r2": -41.40668793718462,
+        "n": 3
+      },
+      "severson_logvar": {
+        "rmse": 268.42738772123795,
+        "mae": 215.0411110773749,
+        "r2": -40.29389724335394,
+        "n": 3
+      }
+    },
+    "cellTable": [
+      {
+        "battery_id": "CS2_35",
+        "source": "calce",
+        "n": 932,
+        "q0": 1.1296364681289206,
+        "eol_cycle": 542.0,
+        "eol_censored": false,
+        "last_capacity_ah": 0.3015433134466185
+      },
+      {
+        "battery_id": "CS2_36",
+        "source": "calce",
+        "n": 969,
+        "q0": 1.1360043229608379,
+        "eol_cycle": 498.0,
+        "eol_censored": false,
+        "last_capacity_ah": 0.17015585568919
+      },
+      {
+        "battery_id": "CS2_38",
+        "source": "calce",
+        "n": 1076,
+        "q0": 1.1311552359731625,
+        "eol_cycle": 600.0,
+        "eol_censored": false,
+        "last_capacity_ah": 0.2880146720451044
+      }
+    ]
+  },
+  "nasaToCalceK40": {
+    "k": 40,
+    "trainCells": [
+      "B0005",
+      "B0006",
+      "B0007",
+      "B0018"
+    ],
+    "testCells": [
+      "CS2_35",
+      "CS2_36",
+      "CS2_38"
+    ],
+    "target": "80% of initial (smoothed) capacity",
+    "note": "Train on NASA, test on CALCE CS2. Different chemistry (18650 vs pouch), nameplate (2.0 Ah vs 1.1 Ah), and lifetime scale. Poor transfer is expected.",
+    "perCell": {
+      "CS2_35": {
+        "y": 542.0,
+        "persist": 93.0,
+        "linear": 117.39255762020397,
+        "ridge": 89.55758180217174,
+        "severson_logvar": 123.81266893140102
+      },
+      "CS2_36": {
+        "y": 498.0,
+        "persist": 93.0,
+        "linear": 161.66665734694047,
+        "ridge": 100.32053650669658,
+        "severson_logvar": 135.9233109489658
+      },
+      "CS2_38": {
+        "y": 600.0,
+        "persist": 93.0,
+        "linear": 129.04780300216177,
+        "ridge": 89.21082934163864,
+        "severson_logvar": 124.1027163687086
+      }
+    },
+    "pooled": {
+      "persist": {
+        "rmse": 455.58570360946726,
+        "mae": 453.6666666666667,
+        "r2": -117.95217778909833,
+        "n": 3
+      },
+      "linear": {
+        "rmse": 414.4102513860642,
+        "mae": 410.63099401023123,
+        "r2": -97.4222305199152,
+        "n": 3
+      },
+      "ridge": {
+        "rmse": 455.9819712557639,
+        "mae": 453.63701744983103,
+        "r2": -118.15919657365197,
+        "n": 3
+      },
+      "severson_logvar": {
+        "rmse": 421.291030519315,
+        "mae": 418.7204345836415,
+        "r2": -100.717727430224,
+        "n": 3
+      }
+    }
+  },
+  "calceRatedAh": 1.1
+}

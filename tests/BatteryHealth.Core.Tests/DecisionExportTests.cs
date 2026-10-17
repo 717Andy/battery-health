@@ -90,6 +90,12 @@ public class DecisionExportTests
         Assert.Equal(29, decision.GetProperty("fadeRulTo70Cycles").GetDouble());
         Assert.Equal(19, decision.GetProperty("fadeRulTo80Cycles").GetDouble());
         Assert.Contains("empirical error", decision.GetProperty("typicalProtocolError").GetString());
+        Assert.Contains("stressed_rul_to_70", csv);
+        Assert.Contains("stressed_rul_to_80_ea_0_70", csv);
+        Assert.Equal(report.StressedRulTo70, report.StressedRulTo70Ea050);
+        Assert.Equal(report.StressedRulTo80, report.StressedRulTo80Ea050);
+        Assert.True(report.StressedRulTo70 <= report.BaselineRulTo70);
+        Assert.True(report.StressedRulTo70Ea070 <= report.StressedRulTo70Ea030);
         Assert.True(report.AccelerationAtEa070 > report.AccelerationAtEa050);
         Assert.True(report.AccelerationAtEa050 > report.AccelerationAtEa030);
         Assert.Equal(45, report.ScenarioAmbientC);

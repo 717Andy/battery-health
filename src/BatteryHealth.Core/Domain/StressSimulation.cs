@@ -6,6 +6,9 @@ public sealed class StressScenario
     public double DischargeCRate { get; set; } = 1.0;
     public int? CurrentCycle { get; set; }
     public double? EolCapacityFraction { get; set; }
+
+    /// <summary>When null, the scenario uses the reference 0.50 eV constant.</summary>
+    public double? ArrheniusEaEv { get; set; }
 }
 
 public sealed class FadePoint

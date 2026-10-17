@@ -71,8 +71,28 @@ public static class ChartFactory
             });
         }
 
+        if (baseline.Length > 0)
+        {
+            var first = baseline[0].X ?? 0;
+            var last = baseline[^1].X ?? first;
+            series.Add(Threshold("70% of nameplate", first, last, battery.RatedCapacityAh * 0.70, Amber));
+            series.Add(Threshold("80% of nameplate", first, last, battery.RatedCapacityAh * 0.80, Slate));
+        }
+
         return series.ToArray();
     }
+
+    private static LineSeries<ObservablePoint> Threshold(string name, double first, double last, double capacityAh, SolidColorPaint paint) =>
+        new()
+        {
+            Name = name,
+            Values = [new ObservablePoint(first, capacityAh), new ObservablePoint(last, capacityAh)],
+            Fill = null,
+            Stroke = paint,
+            GeometrySize = 0,
+            LineSmoothness = 0,
+            StrokeDashArray = [6, 4],
+        };
 
     public static ISeries[] SohSeries(IReadOnlyList<ForecastResult> forecasts, BatteryRecord battery)
     {

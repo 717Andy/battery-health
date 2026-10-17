@@ -29,6 +29,9 @@
             <TextBlock Text="{x:Bind ViewModel.AfText, Mode=OneWay}" FontWeight="SemiBold" TextWrapping="Wrap"/>
             <TextBlock Text="{x:Bind ViewModel.EaBandText, Mode=OneWay}" TextWrapping="Wrap"/>
             <TextBlock Text="{x:Bind ViewModel.RulCompare, Mode=OneWay}" TextWrapping="Wrap"/>
+            <TextBlock Text="{x:Bind ViewModel.OutlookText, Mode=OneWay}" TextWrapping="Wrap"/>
+            <TextBlock Text="{x:Bind ViewModel.EaRulText, Mode=OneWay}" TextWrapping="Wrap"/>
+            <TextBlock Text="{x:Bind ViewModel.ExtrapolatedText, Mode=OneWay}" TextWrapping="Wrap"/>
             <Button Content="Reset to NASA 24 °C / 1C" Click="OnReset"/>
         </StackPanel>
 
@@ -38,7 +41,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <TextBlock Text="Baseline fade vs stressed fade" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <TextBlock Text="{x:Bind ViewModel.ChartTitle, Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,8"/>
                 <lvc:CartesianChart Grid.Row="1"
                                     Series="{x:Bind ViewModel.FadeSeries, Mode=OneWay}"
                                     XAxes="{x:Bind ViewModel.CycleAxis}"

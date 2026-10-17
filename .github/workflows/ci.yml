@@ -46,13 +46,31 @@ jobs:
 
       - uses: microsoft/setup-msbuild@v2
 
-      - name: Restore and build unpackaged x64 WinUI 3 app
+      # Official unpackaged recipe: MSBuild Restore then Publish (not `dotnet build`).
+      # WASDK 1.6's net472 XamlCompiler.exe exited 1 with no XAML diagnostic
+      # (`MSB3073`). 1.8 surfaces WMC* errors. Do not pass RuntimeIdentifier
+      # together with Platform=x64 — that produced `win-x64\\input.json`.
+      - name: Restore WinUI app
+        run: msbuild src/BatteryHealth.App/BatteryHealth.App.csproj -t:Restore -p:Configuration=Release -p:Platform=x64
+
+      - name: Publish unpackaged x64 WinUI 3 app
         run: >
-          dotnet build src/BatteryHealth.App/BatteryHealth.App.csproj
-          --configuration Release
+          msbuild src/BatteryHealth.App/BatteryHealth.App.csproj
+          -t:Publish
+          -p:Configuration=Release
           -p:Platform=x64
-          -p:RuntimeIdentifier=win-x64
           -p:WindowsPackageType=None
           -p:WindowsAppSDKSelfContained=true
           -p:GenerateAppxPackageOnBuild=false
           -p:AppxPackageSigningEnabled=false
+
+      - name: Dump XAML compiler logs
+        if: failure()
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path src/BatteryHealth.App -Recurse -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match '^(output\.json|input\.json|XamlSaveStateFile\.xml)$' -or $_.Extension -in '.log','.err' } |
+            ForEach-Object {
+              Write-Host "===== $($_.FullName) ====="
+              Get-Content -LiteralPath $_.FullName -Raw -ErrorAction SilentlyContinue
+            }

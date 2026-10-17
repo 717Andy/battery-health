@@ -164,7 +164,8 @@ On the 3-cycle B0005 fixture, cycle 1: predicted SoH **0.9276** vs measured **0.
 The desktop project is a Fluent shell over `BatteryHealth.Core`. It is **not** the primary demo. Build it on Windows 10/11 with Visual Studio 2022 (Windows App SDK workload) or:
 
 ```powershell
-dotnet build src\BatteryHealth.App\BatteryHealth.App.csproj -c Debug -p:Platform=x64
+msbuild src\BatteryHealth.App\BatteryHealth.App.csproj -t:Restore -p:Configuration=Release -p:Platform=x64
+msbuild src\BatteryHealth.App\BatteryHealth.App.csproj -t:Publish -p:Configuration=Release -p:Platform=x64
 ```
 
 Restoring that `.csproj` on Linux fails with `NETSDK1100`. Use `BatteryHealth.Linux.slnf` here.
@@ -227,7 +228,7 @@ dotnet test BatteryHealth.Linux.slnf                 # 28 passed
 GitHub Actions (`.github/workflows/ci.yml`):
 
 - **ubuntu-latest `contract`:** pytest, `BatteryHealth.Linux.slnf`, CLI `forecast` / `simulate` / `export` on fixtures. Does not retrain; committed ONNX is the artifact under test. Does not restore the WinUI project (`NETSDK1100`).
-- **windows-latest `winui`:** `dotnet build` of the unpackaged `BatteryHealth.App` x64 project (Windows App SDK from NuGet, self-contained). Compiles the optional desktop shell; it does not launch the GUI.
+- **windows-latest `winui`:** MSBuild `Restore` + `Publish` of the unpackaged `BatteryHealth.App` x64 project (Windows App SDK 1.8 from NuGet, self-contained). Compiles the optional desktop shell; it does not launch the GUI.
 
 ## Compared with industrial tools (scope only)
 

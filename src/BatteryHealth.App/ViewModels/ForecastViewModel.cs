@@ -5,7 +5,7 @@ using BatteryHealth.Core.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LiveChartsCore;
-using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.Kernel.Sketches;
 
 namespace BatteryHealth.App.ViewModels;
 
@@ -32,8 +32,8 @@ public partial class ForecastViewModel : ObservableObject
     private string? _typicalError;
     private double? _sohHoldoutRmse;
 
-    public Axis[] CycleAxis { get; } = ChartFactory.CycleAxis();
-    public Axis[] SohAxis { get; } = ChartFactory.SohAxis();
+    public ICartesianAxis[] CycleAxis { get; } = ChartFactory.CycleAxis();
+    public ICartesianAxis[] SohAxis { get; } = ChartFactory.SohAxis();
 
     public ForecastViewModel(WorkspaceViewModel workspace)
     {

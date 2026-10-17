@@ -1,6 +1,7 @@
 using BatteryHealth.Core.Domain;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
@@ -186,15 +187,15 @@ public static class ChartFactory
         return series.ToArray();
     }
 
-    public static Axis[] TimeAxis() => [new Axis { Name = "Time (s)" }];
-    public static Axis[] CycleAxis() => [new Axis { Name = "Cycle" }];
-    public static Axis[] SensorYAxis() =>
+    public static ICartesianAxis[] TimeAxis() => [new Axis { Name = "Time (s)" }];
+    public static ICartesianAxis[] CycleAxis() => [new Axis { Name = "Cycle" }];
+    public static ICartesianAxis[] SensorYAxis() =>
     [
         new Axis { Name = "Voltage (V)", Position = AxisPosition.Start },
         new Axis { Name = "Current (A) and temperature (°C)", Position = AxisPosition.End },
     ];
-    public static Axis[] CapacityAxis() => [new Axis { Name = "Capacity (Ah)" }];
-    public static Axis[] SohAxis() => [new Axis { Name = "SoH (%)" }];
+    public static ICartesianAxis[] CapacityAxis() => [new Axis { Name = "Capacity (Ah)" }];
+    public static ICartesianAxis[] SohAxis() => [new Axis { Name = "SoH (%)" }];
 
     private static SolidColorPaint Dashed(SolidColorPaint source, float on, float off) =>
         new(source.Color)

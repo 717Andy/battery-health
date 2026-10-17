@@ -55,6 +55,26 @@ LOBO RUL is dominated by censored B0007 (~38 cycle RMSE). B0005 / B0018 transfer
 
 Stress overlay: Arrhenius \(E_a=0.50\,\mathrm{eV}\) × \((C/1\mathrm{C})^{0.60}\). Those constants were **not identified** on the NASA cells.
 
+### Result figures
+
+Regenerate from committed `artifacts/metrics.json` (no NASA download):
+
+```bash
+PYTHONPATH=ml python ml/scripts/plot_results.py
+```
+
+**Leave-one-battery-out RUL, including B0007.** Teacher-forced GBR (measured SoH) vs the inference graph (predicted SoH fed into RUL). B0007 is hatched: it never hits 1.4 Ah, so a last-cycle RUL of ~0 is not an observed failure. That cell is why pooled LOBO RUL looks like ~22 cycles.
+
+![Per-cell LOBO RUL](docs/figures/lobo_rul_per_cell.png)
+
+**SoH: Ridge vs GBR vs XGBoost.** Ridge has the lowest error on this protocol. GBR is what we ship because it converts cleanly to ONNX, not because it wins SoH.
+
+![SoH model comparison](docs/figures/soh_ridge_gbr_xgb.png)
+
+**Nested uncensored RUL.** Scoring the actual SoH→RUL pipeline and then dropping the censored cell gives **11.97 cycle RMSE (n=468)**. The 21.7 number includes B0007’s right-censored labels. The forecast UI quotes the uncensored figure and says it is empirical, not a prediction interval.
+
+![Nested uncensored RUL RMSE](docs/figures/nested_rul_uncensored.png)
+
 ## Screenshots (Linux, bundled B0005 sample, cycle 40)
 
 | Dashboard | Forecast | Stress @ 45 °C / 2C |
@@ -171,7 +191,7 @@ Same columns in Python and C# (`artifacts/models/feature_spec.json`):
 ## Tests
 
 ```bash
-PYTHONPATH=ml python -m pytest ml/tests -q          # 20 passed
+PYTHONPATH=ml python -m pytest ml/tests -q          # 21 passed
 dotnet test BatteryHealth.Linux.slnf                 # 28 passed
 ```
 
@@ -187,7 +207,7 @@ This is a laptop diagnostic on four NASA 18650s with published hold-out numbers.
 
 - NASA PCoE zip download and parse of B0005 / B0006 / B0007 / B0018 (zip ≈ 210 MB; not required for the demo)
 - Feature tables, training, LOBO, noise study, ONNX export
-- `pytest` — 20 passed
+- `pytest` — 21 passed
 - `dotnet test` on `BatteryHealth.Linux.slnf` — 28 passed
 - FastAPI demo: `/`, `/demo/B0005`, forecast, 45 °C / 2C stress
 - CLI `forecast` / `simulate` / `export` on the fixtures

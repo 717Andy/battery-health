@@ -75,6 +75,35 @@ PYTHONPATH=ml python ml/scripts/plot_results.py
 
 ![Nested uncensored RUL RMSE](docs/figures/nested_rul_uncensored.png)
 
+## Early-cycle lifetime (first K cycles → EOL)
+
+Predict the cycle when capacity first falls to **80% of that cell's own initial capacity** (rolling-median crossing). This is a different job from the shipped per-cycle RUL ONNX head.
+
+NASA 18650s hit that line around **61–125 cycles**, so K=100 would not be early. The NASA table uses **K=40**. CALCE CS2 pouch cells (1.1 Ah, 1C, official zips for CS2_35/36/38) last **~500–600 cycles**, so **K=100** is actually early there.
+
+The “Severson-style” feature is **log variance of early capacity**, not the paper’s ΔQ(V) interpolant. We did not keep CALCE voltage-capacity curves in the compact fade extract.
+
+| Setting | n | Persist RMSE | Linear RMSE | Ridge RMSE | log-var RMSE |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| NASA leave-one-cell-out, K=40 | 4 | 32.9 | 151.2 | 28.5 | **16.4** |
+| CALCE CS2 leave-one-cell-out, K=100 | 3 | **62.7** | 323.8 | 272.0 | 268.4 |
+| NASA → CALCE domain shift, K=40 | 3 | 455.6 | 414.4 | 456.0 | 421.3 |
+
+On four NASA cells, log-variance of the first 40 capacities beats a mean baseline. On three CALCE cells, **persist wins** — Ridge and log-var overfit with two training cells. Transferring the NASA fit to CALCE predicts ~90–160 cycle lives against 498–600 observed (**RMSE ~400 cycles**). That is a failed transfer, not a leaderboard number.
+
+![Early-cycle RMSE](docs/figures/early_cycle_rmse.png)
+
+Regenerate:
+
+```bash
+# optional: rebuild CALCE fade from official zips (~35 MB each)
+python ml/scripts/download_calce.py
+PYTHONPATH=ml python -m batteryhealth.early_cycle
+PYTHONPATH=ml python ml/scripts/plot_early_cycle.py
+```
+
+Compact fade tables (not the zips) live in `artifacts/early_cycle/`.
+
 ## Screenshots (Linux, bundled B0005 sample, cycle 40)
 
 | Dashboard | Forecast | Stress @ 45 °C / 2C |
@@ -191,7 +220,7 @@ Same columns in Python and C# (`artifacts/models/feature_spec.json`):
 ## Tests
 
 ```bash
-PYTHONPATH=ml python -m pytest ml/tests -q          # 21 passed
+PYTHONPATH=ml python -m pytest ml/tests -q          # 24 passed
 dotnet test BatteryHealth.Linux.slnf                 # 28 passed
 ```
 
@@ -207,7 +236,7 @@ This is a laptop diagnostic on four NASA 18650s with published hold-out numbers.
 
 - NASA PCoE zip download and parse of B0005 / B0006 / B0007 / B0018 (zip ≈ 210 MB; not required for the demo)
 - Feature tables, training, LOBO, noise study, ONNX export
-- `pytest` — 21 passed
+- `pytest` — 24 passed
 - `dotnet test` on `BatteryHealth.Linux.slnf` — 28 passed
 - FastAPI demo: `/`, `/demo/B0005`, forecast, 45 °C / 2C stress
 - CLI `forecast` / `simulate` / `export` on the fixtures

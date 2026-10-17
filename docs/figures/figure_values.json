@@ -1,0 +1,38 @@
+{
+  "sohHoldoutRmse": {
+    "ridge": 0.002127200444052528,
+    "gbr": 0.006740502525288739,
+    "xgboost": 0.005262026010272491
+  },
+  "sohLoboPooledRmse": {
+    "ridge": 0.005354969577405979,
+    "gbr": 0.014099500986339235,
+    "xgboost": 0.014372598200756785
+  },
+  "rulLoboGbrRmse": {
+    "B0005": 8.321327049065275,
+    "B0006": 16.379755351392166,
+    "B0007": 37.57197816698595,
+    "B0018": 8.540979610755546
+  },
+  "rulNestedPerCellRmse": {
+    "B0005": 8.228512754284793,
+    "B0006": 16.452931465495954,
+    "B0007": 37.106092894855955,
+    "B0018": 8.793082795984457
+  },
+  "censored": {
+    "B0005": false,
+    "B0006": false,
+    "B0007": true,
+    "B0018": false
+  },
+  "rulNestedPooledRmse": 21.65957648582941,
+  "rulNestedUncensoredRmse": 11.970267245273778,
+  "rulNestedUncensoredN": 468,
+  "rulNestedPooledN": 636,
+  "holdoutBattery": "B0018",
+  "nRows": 636,
+  "source": "artifacts/metrics.json",
+  "note": "Hold-out and LOBO numbers are holdout-excluded fits. B0007 is right-censored at 70% EOL (never reaches 1.4 Ah)."
+}

@@ -1,8 +1,47 @@
+---
+title: BatteryHealth
+emoji: 🔋
+colorFrom: teal
+colorTo: slate
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+short_description: NASA 18650 SoH/RUL demo — dashboard, forecast, stress sim
+---
+
 # BatteryHealth
 
-Windows desktop diagnostics for **fleet managers and EV battery engineers**. BatteryHealth loads lithium-ion aging logs, plots charge/discharge sensor curves, estimates **State of Health (SoH)** and **Remaining Useful Life (RUL)**, and lets you scrub virtual ambient temperature and discharge C-rate to see how the fade curve moves.
+Lithium-ion **State of Health (SoH)** and **Remaining Useful Life (RUL)** on NASA PCoE 18650 cells. The primary clickable demo is a local (or Hugging Face Space) web UI: lifecycle dashboard, forecast with published error, and a stress simulator. A WinUI 3 desktop shell exists for Windows; it is optional.
 
-This is a **local** tool. Inference runs in-process through ONNX Runtime. A small Python sidecar is optional for parsing raw NASA `.mat` files and for anything the shipped ONNX graphs do not cover.
+Inference uses the committed ONNX graphs. The demo loads bundled fixtures — it does **not** download the NASA PCoE zip (~210 MB) at runtime.
+
+**Hosted demo:** _not published from this environment (no `HF_TOKEN`)._ After `HF_TOKEN=hf_xxx python scripts/deploy_hf_space.py`, the Space URL is `https://huggingface.co/spaces/717Andy/battery-health` (override with `HF_SPACE_ID`). See [docs/huggingface-space.md](docs/huggingface-space.md).
+
+## Web demo (dashboard / forecast / stress)
+
+```bash
+python -m pip install -r ml/requirements-space.txt
+PYTHONPATH=ml python -m batteryhealth.service.app --host 127.0.0.1 --port 8765
+# open http://127.0.0.1:8765  → Load B0005 demo
+```
+
+Pages:
+
+1. **Lifecycle dashboard** — bundled B0005 sample (fade on every discharge; full V/I/T traces on a handful of cycles), cycle picker, capacity fade.
+2. **RUL forecast** — shipped ONNX SoH/RUL plus the measured fade curve to 70% and 80% of nameplate. The typical-error line is nested SoH→RUL leave-one-battery-out RMSE on uncensored NASA cells (~12 cycles, n=468), not a calibrated interval.
+3. **Stress simulator** — Arrhenius × C-rate overlay. Ea = 0.50 eV and the C-rate exponent 0.60 were **not** identified on these cells.
+
+Or the same container Hugging Face builds:
+
+```bash
+docker build -t batteryhealth-demo .
+docker run --rm -p 7860:7860 batteryhealth-demo
+```
+
+## Desktop / CLI
+
+The WinUI 3 app is a Windows-only shell over the same Core library. The CLI (`BatteryHealth.Cli`) runs on Linux and Windows. A Python sidecar remains available for parsing raw NASA `.mat` files.
 
 ## What is in this repo
 
@@ -15,7 +54,7 @@ This is a **local** tool. Inference runs in-process through ONNX Runtime. A smal
 | `tests/` | xUnit for Core; compact NASA/CALCE fixtures |
 | `artifacts/models/` | Shipped `soh.onnx`, `rul.onnx`, `feature_spec.json` |
 
-Raw NASA `.mat` files are **not** committed (~56 MB for B0005–B0018). Use the download script.
+Raw NASA `.mat` files are **not** committed. The official PCoE zip is about **210 MB**. The web demo does not fetch it. Use `python -m batteryhealth.download` only when you want to retrain.
 
 ## End-of-life definition
 
@@ -35,11 +74,10 @@ CALCE CSV/XLSX ──► Python or Core parser ──┘
                          │
          BatteryHealth.Core (ONNX Runtime + stress math)
                          │
-              ┌──────────┴──────────┐
-              ▼                     ▼
-     BatteryHealth.Cli      BatteryHealth.App (WinUI 3)
-              │
-              └── optional FastAPI :8765  (parse .mat, extra tools)
+              ┌──────────┼──────────────────────┐
+              ▼          ▼                      ▼
+     BatteryHealth.Cli   FastAPI web demo    BatteryHealth.App (WinUI 3, optional)
+                         (primary demo)
 ```
 
 **Charting:** the pitch mentioned OxyPlot.Windows. That package targets UWP / WinUI 2 and does not officially support WinUI 3. The desktop app uses **LiveCharts2** (`LiveChartsCore.SkiaSharpView.WinUI`) for Cartesian plots. Core stays chart-agnostic.
@@ -175,12 +213,13 @@ $env:PYTHONPATH = "ml"
 python -m batteryhealth.service.app --port 8765
 ```
 
-- `GET /health`, `GET /metrics`
-- `POST /predict/soh`, `POST /predict/rul`
-- `POST /simulate/stress`
+- Browser UI at `/` (dashboard, forecast, simulator)
+- `GET /health`, `GET /metrics`, `GET /demo`, `GET /workspace/copy`
+- `POST /predict/soh`, `POST /predict/rul`, `POST /simulate/stress`
+- `POST /workspace/forecast`, `/workspace/trajectory`, `/workspace/export`
 - `POST /parse/nasa` (upload `.mat`), `POST /parse/calce`
 
-The WinUI app does **not** require this process. Use it to ingest raw `.mat` files or to call the same math from another tool.
+The WinUI app does **not** require this process. The web demo is the primary way to click through the same three screens on Linux.
 
 ### 3. Build Core / CLI (any OS with .NET 8)
 

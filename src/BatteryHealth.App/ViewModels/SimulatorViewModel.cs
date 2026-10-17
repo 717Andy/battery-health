@@ -87,7 +87,7 @@ public partial class SimulatorViewModel : ObservableObject
             ? "Stressed end of life is past the last measured cycle."
             : "";
         ChartTitle = $"Stress applied after cycle {outlook.StartCycle}";
-        FadeSeries = ChartFactory.FadeSeries(Workspace.Battery, outlook.StressedCurve);
+        FadeSeries = ChartFactory.FadeSeries(Workspace.Battery, outlook.StressedCurve, outlook.StartCycle);
     }
 
     internal static string DescribeEaBand(double ambientC, double cRate)

@@ -38,4 +38,20 @@ public static class ProtocolError
         n = pooled.GetProperty("n").GetInt32();
         return true;
     }
+
+    public static bool TryReadSohHoldoutRmse(string metricsJson, out double rmseFraction)
+    {
+        rmseFraction = 0;
+        using var doc = JsonDocument.Parse(metricsJson);
+        if (!doc.RootElement.TryGetProperty("soh", out var soh) ||
+            !soh.TryGetProperty("gbr", out var gbr) ||
+            !gbr.TryGetProperty("holdout", out var holdout) ||
+            !holdout.TryGetProperty("rmse", out var rmse))
+        {
+            return false;
+        }
+
+        rmseFraction = rmse.GetDouble();
+        return true;
+    }
 }

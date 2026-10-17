@@ -85,7 +85,7 @@ public partial class DashboardViewModel : ObservableObject
         }
 
         SensorSeries = ChartFactory.SensorSeries(Workspace.SelectedCycle);
-        FadeSeries = ChartFactory.FadeSeries(battery);
+        FadeSeries = ChartFactory.FadeSeries(battery, selectedCycle: Workspace.SelectedCycle?.CycleIndex);
     }
 
     partial void OnSelectedRowIndexChanged(int value)

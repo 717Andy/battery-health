@@ -161,6 +161,15 @@ public class DecisionExportTests
         Assert.Contains("not a calibrated prediction interval", ProtocolError.TypicalMiss(rmse, n));
     }
 
+    [Fact]
+    public void SohHoldoutRmse_ReadsTheGbrHoldout()
+    {
+        var metrics = """{"soh":{"gbr":{"holdout":{"rmse":0.0067405,"n":132}}}}""";
+        Assert.True(ProtocolError.TryReadSohHoldoutRmse(metrics, out var rmse));
+        Assert.Equal(0.0067405, rmse, 6);
+        Assert.False(ProtocolError.TryReadSohHoldoutRmse("{}", out _));
+    }
+
     private static BatteryRecord Sample() => new()
     {
         BatteryId = "CELL",

@@ -224,7 +224,10 @@ PYTHONPATH=ml python -m pytest ml/tests -q          # 24 passed
 dotnet test BatteryHealth.Linux.slnf                 # 28 passed
 ```
 
-GitHub Actions (`.github/workflows/ci.yml`) runs those tests and a CLI `forecast` / `simulate` smoke on the fixtures. It does not retrain; the committed ONNX files are the artifact under test.
+GitHub Actions (`.github/workflows/ci.yml`):
+
+- **ubuntu-latest `contract`:** pytest, `BatteryHealth.Linux.slnf`, CLI `forecast` / `simulate` / `export` on fixtures. Does not retrain; committed ONNX is the artifact under test. Does not restore the WinUI project (`NETSDK1100`).
+- **windows-latest `winui`:** `dotnet build` of the unpackaged `BatteryHealth.App` x64 project (Windows App SDK from NuGet, self-contained). Compiles the optional desktop shell; it does not launch the GUI.
 
 ## Compared with industrial tools (scope only)
 
@@ -243,9 +246,9 @@ This is a laptop diagnostic on four NASA 18650s with published hold-out numbers.
 
 **Not compiled or clicked here:**
 
-- `src/BatteryHealth.App` WinUI 3 (needs Windows)
+- Clicking the WinUI 3 GUI (this VM is Linux; CI on `windows-latest` compiles the unpackaged x64 project)
 - A live Hugging Face Space (no `HF_TOKEN` in this environment)
-- Real CALCE `.xlsx` from calce.umd.edu (the CSV fixture **is** tested)
+- Real CALCE `.xlsx` from calce.umd.edu (the CSV fixture **is** tested; CS2 fade CSVs **are** in `artifacts/early_cycle/`)
 
 ## Setup / retrain
 

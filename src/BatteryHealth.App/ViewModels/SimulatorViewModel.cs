@@ -4,7 +4,7 @@ using BatteryHealth.Core.Simulation;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LiveChartsCore;
-using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.Kernel.Sketches;
 
 namespace BatteryHealth.App.ViewModels;
 
@@ -25,8 +25,8 @@ public partial class SimulatorViewModel : ObservableObject
     [ObservableProperty] private string emptyHint = "Load a cell log, or open the B0005 demo.";
     [ObservableProperty] private ISeries[] fadeSeries = [];
 
-    public Axis[] CycleAxis { get; } = ChartFactory.CycleAxis();
-    public Axis[] CapacityAxis { get; } = ChartFactory.CapacityAxis();
+    public ICartesianAxis[] CycleAxis { get; } = ChartFactory.CycleAxis();
+    public ICartesianAxis[] CapacityAxis { get; } = ChartFactory.CapacityAxis();
 
     public SimulatorViewModel(WorkspaceViewModel workspace)
     {

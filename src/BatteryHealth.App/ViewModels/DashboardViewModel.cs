@@ -4,7 +4,7 @@ using BatteryHealth.Core.Domain;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.UI.Xaml;
 using LiveChartsCore;
-using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.Kernel.Sketches;
 
 namespace BatteryHealth.App.ViewModels;
 
@@ -25,10 +25,10 @@ public partial class DashboardViewModel : ObservableObject
 
     private bool _syncing;
 
-    public Axis[] TimeAxis { get; } = ChartFactory.TimeAxis();
-    public Axis[] SensorYAxis { get; } = ChartFactory.SensorYAxis();
-    public Axis[] CycleAxis { get; } = ChartFactory.CycleAxis();
-    public Axis[] CapacityAxis { get; } = ChartFactory.CapacityAxis();
+    public ICartesianAxis[] TimeAxis { get; } = ChartFactory.TimeAxis();
+    public ICartesianAxis[] SensorYAxis { get; } = ChartFactory.SensorYAxis();
+    public ICartesianAxis[] CycleAxis { get; } = ChartFactory.CycleAxis();
+    public ICartesianAxis[] CapacityAxis { get; } = ChartFactory.CapacityAxis();
 
     public DashboardViewModel(WorkspaceViewModel workspace)
     {

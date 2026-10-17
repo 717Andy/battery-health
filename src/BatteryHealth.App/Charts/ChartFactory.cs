@@ -1,9 +1,11 @@
 using BatteryHealth.Core.Domain;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
+using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using SkiaSharp;
 
 namespace BatteryHealth.App.Charts;
@@ -106,10 +108,9 @@ public static class ChartFactory
             Name = name,
             Values = [new ObservablePoint(first, capacityAh), new ObservablePoint(last, capacityAh)],
             Fill = null,
-            Stroke = paint,
+            Stroke = Dashed(paint, 6, 4),
             GeometrySize = 0,
             LineSmoothness = 0,
-            StrokeDashArray = [6, 4],
         };
 
     public static ISeries[] SohSeries(
@@ -163,9 +164,8 @@ public static class ChartFactory
             Name = "Measured SoH %",
             Values = observed,
             Fill = null,
-            Stroke = Slate,
+            Stroke = Dashed(Slate, 4, 3),
             GeometrySize = 0,
-            StrokeDashArray = [4, 3],
         });
 
         if (selectedCycle is { } chosen)
@@ -187,15 +187,22 @@ public static class ChartFactory
         return series.ToArray();
     }
 
-    public static Axis[] TimeAxis() => [new Axis { Name = "Time (s)" }];
-    public static Axis[] CycleAxis() => [new Axis { Name = "Cycle" }];
-    public static Axis[] SensorYAxis() =>
+    public static ICartesianAxis[] TimeAxis() => [new Axis { Name = "Time (s)" }];
+    public static ICartesianAxis[] CycleAxis() => [new Axis { Name = "Cycle" }];
+    public static ICartesianAxis[] SensorYAxis() =>
     [
         new Axis { Name = "Voltage (V)", Position = AxisPosition.Start },
         new Axis { Name = "Current (A) and temperature (°C)", Position = AxisPosition.End },
     ];
-    public static Axis[] CapacityAxis() => [new Axis { Name = "Capacity (Ah)" }];
-    public static Axis[] SohAxis() => [new Axis { Name = "SoH (%)" }];
+    public static ICartesianAxis[] CapacityAxis() => [new Axis { Name = "Capacity (Ah)" }];
+    public static ICartesianAxis[] SohAxis() => [new Axis { Name = "SoH (%)" }];
+
+    private static SolidColorPaint Dashed(SolidColorPaint source, float on, float off) =>
+        new(source.Color)
+        {
+            StrokeThickness = source.StrokeThickness <= 0 ? 2 : source.StrokeThickness,
+            PathEffect = new DashEffect([on, off]),
+        };
 
     private static LineSeries<ObservablePoint> Line(string name, IReadOnlyList<double> x, IReadOnlyList<double> y, SolidColorPaint paint, int scalesYAt = 0)
     {

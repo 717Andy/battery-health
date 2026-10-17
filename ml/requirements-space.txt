@@ -1,0 +1,12 @@
+# Runtime deps for the Hugging Face Space / Docker demo.
+# Training extras (xgboost, skl2onnx, pytest) are not required to serve ONNX.
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+scikit-learn>=1.4
+onnxruntime>=1.18
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9
+openpyxl>=3.1
+joblib>=1.3

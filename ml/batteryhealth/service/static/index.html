@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BatteryHealth — EV lithium-ion degradation &amp; RUL</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="titlebar">
+    <div>
+      <h1>BatteryHealth</h1>
+      <p>EV lithium-ion degradation &amp; RUL forecaster</p>
+    </div>
+    <div class="titlebar-right">
+      <span id="battery-title">No battery loaded</span>
+      <span id="sidecar-status" class="status-pill">Starting…</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="pane" aria-label="Pages">
+      <button id="nav-dashboard" class="nav-item active" data-page="dashboard">Lifecycle dashboard</button>
+      <button id="nav-forecast" class="nav-item" data-page="forecast">RUL forecast</button>
+      <button id="nav-simulator" class="nav-item" data-page="simulator">Stress simulator</button>
+    </nav>
+
+    <main>
+      <section id="page-dashboard" class="page">
+        <h2>Battery lifecycle</h2>
+        <p id="summary-line" class="lede">Clickable demo of the dashboard, forecast, and stress screens. Inference is the shipped ONNX graphs.</p>
+        <p id="empty-hint" class="hint">Load B0005 demo uses the bundled sample JSON in this repo (not the ~210 MB NASA zip). You can also open a processed NASA JSON or a CALCE CSV/Excel file.</p>
+
+        <div class="toolbar">
+          <button id="btn-open" class="accent" type="button">Open NASA JSON / CALCE file</button>
+          <button id="btn-demo" type="button">Load B0005 demo</button>
+          <input id="file-input" type="file" accept=".json,.csv,.xlsx,.xls" hidden>
+          <span id="status-line" class="status">Load a NASA processed JSON or a CALCE CSV/Excel log.</span>
+        </div>
+        <p id="error-line" class="error" hidden></p>
+        <article id="intake-card" class="card hidden">
+          <p id="intake-text"></p>
+        </article>
+
+        <div class="split">
+          <article class="card chart-card">
+            <h3 id="cycle-caption">Select a discharge cycle with a sensor trace.</h3>
+            <canvas id="sensor-chart"></canvas>
+          </article>
+          <aside class="card cycle-card">
+            <h3>Discharge cycles</h3>
+            <select id="cycle-list" size="10" disabled></select>
+            <label class="rated-label" for="rated-ah">Rated capacity (Ah)</label>
+            <input id="rated-ah" type="number" min="0.1" max="20" step="0.1" value="2.0" disabled>
+            <p class="hint">Each row is one discharge. The nameplate sets measured SoH and both end-of-life lines. The SoH model stays the NASA 2.0 Ah fit.</p>
+          </aside>
+        </div>
+
+        <article class="card chart-card">
+          <h3>Capacity / SoH fade across cycles</h3>
+          <canvas id="fade-chart"></canvas>
+        </article>
+      </section>
+
+      <section id="page-forecast" class="page hidden">
+        <h2>RUL &amp; SoH forecast</h2>
+        <p id="forecast-headline" class="lede">Run a forecast on the loaded cell.</p>
+        <p id="forecast-empty" class="hint">Load a cell log, or open the B0005 demo.</p>
+        <div class="toolbar">
+          <button id="btn-demo-forecast" type="button">Load B0005 demo</button>
+          <button id="btn-export" class="accent" type="button">Export CSV and JSON</button>
+          <button id="btn-refresh" type="button">Re-run forecast</button>
+        </div>
+
+        <div class="metrics-row">
+          <article class="card metric">
+            <p class="metric-label">Predicted SoH</p>
+            <p id="soh-text" class="metric-value">—</p>
+            <p id="observed-text">No measured capacity on this cycle.</p>
+          </article>
+          <article class="card metric">
+            <p class="metric-label">RUL to 70%</p>
+            <p id="rul70-text" class="metric-value">—</p>
+            <p class="hint">Model: ONNX cycles until 70% of the 2.0 Ah training nameplate.</p>
+            <p id="rul70-fade" class="strong"></p>
+            <p class="hint">Fade curve: cycles until 70% of the nameplate.</p>
+          </article>
+          <article class="card metric">
+            <p class="metric-label">RUL to 80% (fade curve)</p>
+            <p id="rul80-text" class="metric-value">—</p>
+            <p class="hint">Cycles until 80% of the nameplate on the measured fade curve.</p>
+          </article>
+        </div>
+        <p id="feature-shift"></p>
+        <p id="typical-error"></p>
+        <p id="applicability" class="hint"></p>
+        <p id="warning-text" class="error"></p>
+        <p id="metrics-text" class="hint"></p>
+
+        <article id="export-preview" class="card hidden">
+          <h3>Exported decision report</h3>
+          <p id="export-status" class="lede"></p>
+          <p class="hint">The desktop app writes these two files next to each other. This is the same CSV header and the JSON decision block.</p>
+          <pre id="export-csv" class="export-pre"></pre>
+          <pre id="export-json" class="export-pre"></pre>
+        </article>
+
+        <article class="card chart-card">
+          <h3>Predicted vs measured SoH across cycles</h3>
+          <canvas id="soh-chart"></canvas>
+        </article>
+      </section>
+
+      <section id="page-simulator" class="page hidden">
+        <div class="sim-layout">
+          <aside class="card sim-controls">
+            <h2>Thermal &amp; load stress</h2>
+            <p id="sim-empty" class="hint">Load a cell log, or open the B0005 demo.</p>
+            <button id="btn-demo-sim" type="button">Load B0005 demo</button>
+            <p id="physics-note" class="hint">Scenario acceleration referenced to 24 °C and 1C. Ea = 0.50 eV and the C-rate exponent 0.60 were not identified on the NASA cells.</p>
+
+            <label for="temp-slider">Ambient temperature (°C)</label>
+            <input id="temp-slider" type="range" min="-10" max="55" step="1" value="24">
+            <p id="temp-value">24</p>
+
+            <label for="crate-slider">Discharge C-rate</label>
+            <input id="crate-slider" type="range" min="0.2" max="3.0" step="0.1" value="1.0">
+            <p id="crate-value">1.0</p>
+
+            <p id="af-text" class="af">AF = 1.00</p>
+            <p id="ea-band"></p>
+            <p id="rul-compare">Load a battery to simulate thermal and load stress.</p>
+            <button id="btn-reset" type="button">Reset to NASA 24 °C / 1C</button>
+          </aside>
+          <article class="card chart-card">
+            <h3>Baseline fade vs stressed fade</h3>
+            <canvas id="stress-chart"></canvas>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer class="statusbar">
+    <span id="footer-status">Ready.</span>
+  </footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>
